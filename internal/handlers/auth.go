@@ -26,3 +26,11 @@ func (h *AuthHandler) PostDummyLogin(c *fiber.Ctx) error {
 	}
 	return c.JSON(token)
 }
+
+func (h *AuthHandler) PostRegister(c *fiber.Ctx) error {
+	return nil
+}
+
+func (h *AuthHandler) PostLogin(c *fiber.Ctx) error {
+	return nil
+}

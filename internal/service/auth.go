@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/whaleship/pvz/internal/gen"
+	"github.com/whaleship/pvz/internal/repository"
 	"github.com/whaleship/pvz/internal/utils"
 )
 
@@ -13,10 +14,11 @@ type AuthService interface {
 }
 
 type authService struct {
+	userRepo repository.UserRepository
 }
 
-func NewAuthService() AuthService {
-	return &authService{}
+func NewAuthService(userRepo repository.UserRepository) AuthService {
+	return &authService{userRepo: userRepo}
 }
 
 func (s *authService) DummyLogin(req gen.PostDummyLoginJSONRequestBody) (string, error) {

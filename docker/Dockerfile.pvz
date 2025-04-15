@@ -1,0 +1,16 @@
+FROM golang:1.24.2 AS builder
+WORKDIR /pvz
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -o pvz-app ./cmd/pvz/main.go
+
+FROM alpine:latest
+RUN apk add --no-cache dumb-init
+WORKDIR /pvz
+COPY --from=builder /pvz/pvz-app .
+EXPOSE 8080
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD ["./pvz-app"]

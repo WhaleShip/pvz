@@ -1,0 +1,41 @@
+services:
+
+  db:
+    container_name: avito-postgres
+    image: postgres:17
+    restart: always
+    env_file:
+      - ./.env
+    volumes:
+      - ./migrations/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+  
+  pvz:
+    container_name: avito-pvz
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.pvz
+    env_file:
+      - ./.env
+    restart: always
+    ports:
+      - "8080:8080"
+      - "9000:9000" 
+    depends_on:
+      db:
+        condition: service_healthy
+
+  pgbouncer:
+    container_name: avito-pgbouncer
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.pgbouncer
+    restart: always
+    env_file:
+      - ./.env
+    depends_on:
+      - db

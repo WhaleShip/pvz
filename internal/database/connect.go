@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func ConnectPostgres(cfg Config) (*pgxpool.Pool, error) {
+func connectPostgres(cfg Config) (*pgxpool.Pool, error) {
 	maxConn := 5
 	if !fiber.IsChild() {
 		maxConn = runtime.NumCPU() * 4

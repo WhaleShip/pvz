@@ -34,7 +34,7 @@ func GetInitializedDB() (*pgxpool.Pool, error) {
 		DBName:   getEnvVariable("POSTGRES_DB"),
 		SSLMode:  getEnvVariable("SSL_MODE"),
 	}
-	pool, err := ConnectPostgres(cfg)
+	pool, err := connectPostgres(cfg)
 	if err != nil {
 		return nil, err
 	}

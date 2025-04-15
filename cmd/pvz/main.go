@@ -8,18 +8,21 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/whaleship/pvz/internal/database"
-	"github.com/whaleship/pvz/internal/handlers"
-	"github.com/whaleship/pvz/internal/service"
+	"github.com/whaleship/pvz/internal/gen"
+	"github.com/whaleship/pvz/internal/server"
 )
 
 func main() {
 	isPrefork := true
 	app := fiber.New(fiber.Config{Prefork: isPrefork})
 	app.Use(logger.New())
+	var dbConn *pgxpool.Pool
+	var err error
 
 	if fiber.IsChild() || !isPrefork {
-		dbConn, err := database.GetInitializedDB()
+		dbConn, err = database.GetInitializedDB()
 		app.Use(func(c *fiber.Ctx) error {
 			c.Locals("db", dbConn)
 			return c.Next()
@@ -30,10 +33,9 @@ func main() {
 		defer dbConn.Close()
 	}
 
-	authSvc := service.NewAuthService()
-	authHandler := handlers.NewAuthHandler(authSvc)
-	app.Post("/dummyLogin", authHandler.PostDummyLogin)
+	server := gen.ServerInterface(server.NewServer(dbConn))
 
+	gen.RegisterHandlers(fiber.Router(app), server)
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 

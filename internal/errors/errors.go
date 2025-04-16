@@ -11,6 +11,8 @@ var (
 	ErrUserAlreadyExists = errors.New("пользователь с таким email существует")
 	ErrInvalidPassword   = errors.New("неверный пароль")
 	ErrInvalidRole       = errors.New("неверная роль")
+	ErrInsertPVZFailed   = errors.New("ошибка добавления ПВЗ")
+	ErrInvalidPVZCity    = errors.New("некорректный город")
 )
 
 func GetErrorStatusCode(err error) int {
@@ -23,6 +25,8 @@ func GetErrorStatusCode(err error) int {
 		return fiber.StatusNotFound
 	case errors.Is(err, ErrInvalidPassword):
 		return fiber.StatusUnauthorized
+	case errors.Is(err, ErrInvalidPVZCity):
+		return fiber.StatusBadRequest
 
 	default:
 		return fiber.StatusInternalServerError

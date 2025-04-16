@@ -16,6 +16,7 @@ import (
 type ReceptionRepository interface {
 	CreateReception(ctx context.Context, req gen.PostReceptionsJSONRequestBody) (gen.Reception, error)
 	CloseLastReception(ctx context.Context, pvzID uuid.UUID) (gen.Reception, error)
+	GetReceptionsByPVZ(ctx context.Context, pvzID uuid.UUID) ([]gen.Reception, error)
 }
 
 type receptionRepository struct {
@@ -110,4 +111,42 @@ func (r *receptionRepository) CloseLastReception(ctx context.Context, pvzID uuid
 		PvzId:    pvzID,
 		Status:   gen.ReceptionStatus("close"),
 	}, nil
+}
+
+func (r *receptionRepository) GetReceptionsByPVZ(ctx context.Context, pvzID uuid.UUID) ([]gen.Reception, error) {
+	rows, err := r.db.Query(ctx, QueryGetReceptionsByPVZs, pvzID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, pvz_errors.ErrSelectReceptionsFailed
+		}
+		return nil, err
+	}
+	defer rows.Close()
+
+	var receptions []gen.Reception
+	for rows.Next() {
+		var id uuid.UUID
+		var pvzId uuid.UUID
+		var dt time.Time
+		var status string
+		if err := rows.Scan(&id, &pvzId, &dt, &status); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, pvz_errors.ErrSelectReceptionsFailed
+			}
+			return nil, err
+		}
+		receptions = append(receptions, gen.Reception{
+			Id:       &id,
+			PvzId:    pvzId,
+			DateTime: dt,
+			Status:   gen.ReceptionStatus(status),
+		})
+	}
+	if err = rows.Err(); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, pvz_errors.ErrSelectReceptionsFailed
+		}
+		return nil, err
+	}
+	return receptions, nil
 }

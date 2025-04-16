@@ -15,6 +15,13 @@ const (
 							VALUES ($1, $2, $3)
 							RETURNING id, city, registration_date;`
 
+	QueryGetProductsByReceptions = `SELECT id, reception_id, date_time, type
+							FROM products
+							WHERE reception_id = ANY($1)
+							ORDER BY date_time DESC`
+
+	QuerySelectPVZ = `SELECT id, city, registration_date FROM pvz`
+
 	// recepiton
 	QueryInsertReception = `WITH locked AS (
 								SELECT id
@@ -39,6 +46,11 @@ const (
 								SET status = 'close'
 								WHERE id IN (SELECT id FROM active)
 								RETURNING id;`
+
+	QueryGetReceptionsByPVZs = `SELECT id, pvz_id, date_time, status
+								FROM receptions
+								WHERE pvz_id = $1
+								ORDER BY date_time DESC`
 
 	// products
 	QueryInsertProduct = `WITH active_reception AS (

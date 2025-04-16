@@ -18,14 +18,17 @@ var (
 	ErrInvalidPVZCity      = errors.New("некорректный город")
 	ErrPVZNotFound         = errors.New("ПВЗ не найден")
 	ErrNoOpenRecetionOrPvz = errors.New("нет открытых приёмок или ПВЗ")
+	ErrSelectPVZFailed     = errors.New("ошибка выбора ПВЗ")
 
 	// receptions
-	ErrOpenReceptionExists  = errors.New("открытая приёмка существует")
-	ErrCloseReceptionFailed = errors.New("ПВЗ или приёмка не найдена")
+	ErrOpenReceptionExists    = errors.New("открытая приёмка существует")
+	ErrCloseReceptionFailed   = errors.New("ПВЗ или приёмка не найдена")
+	ErrSelectReceptionsFailed = errors.New("ошибка выбора приёмки")
 
 	// products
-	ErrInvalidProduct  = errors.New("некорректный тип продукта")
-	ErrDeletingProduct = errors.New("не удалось удалить продукт")
+	ErrInvalidProduct       = errors.New("некорректный тип продукта")
+	ErrDeletingProduct      = errors.New("не удалось удалить продукт")
+	ErrSelectProductsFailed = errors.New("ошибка выбора товара")
 
 	// middlewares
 	ErrMissingAuthHeader       = errors.New("отсутствует заголовок авторизации")

@@ -31,5 +31,16 @@ func (h *PVZHandler) PostPvz(c *fiber.Ctx) error {
 }
 
 func (h *PVZHandler) GetPvz(c *fiber.Ctx) error {
-	return nil
+	var params gen.GetPvzParams
+	if err := c.QueryParser(&params); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	response, err := h.pvzService.GetPVZ(c.UserContext(), params)
+	if err != nil {
+		status := pvz_errors.GetErrorStatusCode(err)
+		return fiber.NewError(status, err.Error())
+	}
+
+	return c.JSON(response)
 }

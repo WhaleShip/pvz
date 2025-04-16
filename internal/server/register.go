@@ -61,7 +61,7 @@ func NewServer(conn *pgxpool.Pool) *Server {
 	receptionRepo := repository.NewReceptionRepository(conn)
 
 	authSvc := service.NewAuthService(userRepo)
-	pvzSvc := service.NewPVZService(pvzRepo)
+	pvzSvc := service.NewPVZService(pvzRepo, receptionRepo, productRepo)
 	productSvc := service.NewProductService(productRepo)
 	receptionSvc := service.NewReceptionService(receptionRepo)
 

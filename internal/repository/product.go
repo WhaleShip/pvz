@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	pvz_errors "github.com/whaleship/pvz/internal/errors"
+	"github.com/whaleship/pvz/internal/gen"
 )
 
 type ProductRepository interface {
@@ -18,6 +19,7 @@ type ProductRepository interface {
 		dateTime time.Time,
 		productType string) (uuid.UUID, error)
 	DeleteLastProduct(ctx context.Context, pvzID uuid.UUID) error
+	GetProductsByReceptionIDs(ctx context.Context, receptionIDs []*uuid.UUID) ([]gen.Product, error)
 }
 
 type productRepository struct {
@@ -87,4 +89,43 @@ func (r *productRepository) DeleteLastProduct(ctx context.Context, pvzID uuid.UU
 		return err
 	}
 	return nil
+}
+
+func (r *productRepository) GetProductsByReceptionIDs(ctx context.Context,
+	receptionIDs []*uuid.UUID) ([]gen.Product, error) {
+	rows, err := r.db.Query(ctx, QueryGetProductsByReceptions, receptionIDs)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, pvz_errors.ErrSelectProductsFailed
+		}
+		return nil, err
+	}
+	defer rows.Close()
+
+	var products []gen.Product
+	for rows.Next() {
+		var id uuid.UUID
+		var receptionId uuid.UUID
+		var dt time.Time
+		var typ string
+		if err := rows.Scan(&id, &receptionId, &dt, &typ); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, pvz_errors.ErrSelectProductsFailed
+			}
+			return nil, err
+		}
+		products = append(products, gen.Product{
+			Id:          &id,
+			ReceptionId: receptionId,
+			DateTime:    &dt,
+			Type:        gen.ProductType(typ),
+		})
+	}
+	if err = rows.Err(); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, pvz_errors.ErrSelectProductsFailed
+		}
+		return nil, err
+	}
+	return products, nil
 }

@@ -3,6 +3,8 @@ package handlers
 import (
 	"github.com/gofiber/fiber/v2"
 	openapi_types "github.com/oapi-codegen/runtime/types"
+	pvz_errors "github.com/whaleship/pvz/internal/errors"
+	"github.com/whaleship/pvz/internal/gen"
 	"github.com/whaleship/pvz/internal/service"
 )
 
@@ -15,9 +17,25 @@ func NewReceptionHandler(receptSvc service.ReceptionService) *ReceptionHandler {
 }
 
 func (h *ReceptionHandler) PostReception(c *fiber.Ctx) error {
-	return nil
+	var req gen.PostReceptionsJSONRequestBody
+	if err := c.BodyParser(&req); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	result, err := h.receptionService.CreateReception(req)
+	if err != nil {
+		status := pvz_errors.GetErrorStatusCode(err)
+		return fiber.NewError(status, err.Error())
+	}
+	return c.Status(fiber.StatusCreated).JSON(result)
 }
 
+// CloseReception – обработчик закрытия последней активной приёмки для ПВЗ.
 func (h *ReceptionHandler) CloseReception(c *fiber.Ctx, pvzId openapi_types.UUID) error {
-	return nil
+	result, err := h.receptionService.CloseLastReception(pvzId)
+	if err != nil {
+		status := pvz_errors.GetErrorStatusCode(err)
+		return fiber.NewError(status, err.Error())
+	}
+	return c.JSON(result)
 }

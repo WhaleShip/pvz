@@ -24,7 +24,8 @@ var (
 	ErrCloseReceptionFailed = errors.New("ПВЗ или приёмка не найдена")
 
 	// products
-	ErrInvalidProduct = errors.New("некорректный тип продукта")
+	ErrInvalidProduct  = errors.New("некорректный тип продукта")
+	ErrDeletingProduct = errors.New("не удалось удалить продукт")
 
 	// middlewares
 	ErrMissingAuthHeader       = errors.New("отсутствует заголовок авторизации")
@@ -57,6 +58,12 @@ func GetErrorStatusCode(err error) int {
 	case errors.Is(err, ErrOpenReceptionExists):
 		return fiber.StatusConflict
 	case errors.Is(err, ErrCloseReceptionFailed):
+		return fiber.StatusBadRequest
+
+		// products
+	case errors.Is(err, ErrInvalidProduct):
+		return fiber.StatusBadRequest
+	case errors.Is(err, ErrDeletingProduct):
 		return fiber.StatusBadRequest
 
 	default:

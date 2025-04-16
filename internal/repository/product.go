@@ -81,7 +81,7 @@ func (r *productRepository) DeleteLastProduct(ctx context.Context, pvzID uuid.UU
 	}
 	if cmdTag.RowsAffected() == 0 {
 		_ = tx.Rollback(ctx)
-		return pvz_errors.ErrNoOpenRecetionOrPvz
+		return pvz_errors.ErrDeletingProduct
 	}
 	if err = tx.Commit(ctx); err != nil {
 		return err

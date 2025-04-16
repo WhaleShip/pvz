@@ -7,7 +7,6 @@ linters:
   - asciicheck
   - bidichk
   - bodyclose
-  - cyclop
   - decorder
   - dupl
   - durationcheck

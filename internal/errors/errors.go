@@ -14,13 +14,17 @@ var (
 	ErrInvalidRole       = errors.New("некорректная роль")
 
 	// pvz
-	ErrInsertPVZFailed = errors.New("ошибка добавления ПВЗ")
-	ErrInvalidPVZCity  = errors.New("некорректный город")
-	ErrPVZNotFound     = errors.New("ПВЗ не найден")
+	ErrInsertPVZFailed     = errors.New("ошибка добавления ПВЗ")
+	ErrInvalidPVZCity      = errors.New("некорректный город")
+	ErrPVZNotFound         = errors.New("ПВЗ не найден")
+	ErrNoOpenRecetionOrPvz = errors.New("нет открытых приёмок или ПВЗ")
 
 	// receptions
 	ErrOpenReceptionExists  = errors.New("открытая приёмка существует")
 	ErrCloseReceptionFailed = errors.New("ПВЗ или приёмка не найдена")
+
+	// products
+	ErrInvalidProduct = errors.New("некорректный тип продукта")
 
 	// middlewares
 	ErrMissingAuthHeader       = errors.New("отсутствует заголовок авторизации")
@@ -45,6 +49,8 @@ func GetErrorStatusCode(err error) int {
 	case errors.Is(err, ErrPVZNotFound):
 		return fiber.StatusNotFound
 	case errors.Is(err, ErrInvalidPVZCity):
+		return fiber.StatusBadRequest
+	case errors.Is(err, ErrNoOpenRecetionOrPvz):
 		return fiber.StatusBadRequest
 
 	// receptions

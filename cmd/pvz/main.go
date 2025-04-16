@@ -10,7 +10,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/whaleship/pvz/internal/database"
-	"github.com/whaleship/pvz/internal/gen"
 	"github.com/whaleship/pvz/internal/server"
 )
 
@@ -29,9 +28,9 @@ func main() {
 		defer dbConn.Close()
 	}
 
-	server := gen.ServerInterface(server.NewServer(dbConn))
+	srv := server.NewServer(dbConn)
+	srv.RegisterAllHandlers(app)
 
-	gen.RegisterHandlers(fiber.Router(app), server)
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 

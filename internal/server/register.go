@@ -6,6 +6,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/whaleship/pvz/internal/gen"
 	"github.com/whaleship/pvz/internal/handlers"
+	"github.com/whaleship/pvz/internal/middleware"
 	"github.com/whaleship/pvz/internal/repository"
 	"github.com/whaleship/pvz/internal/service"
 )
@@ -75,4 +76,19 @@ func NewServer(conn *pgxpool.Pool) *Server {
 		ProductHandler:   productHandler,
 		ReceptionHandler: receptionHandler,
 	}
+}
+
+func (srv *Server) RegisterAllHandlers(app *fiber.App) {
+	wrapper := gen.ServerInterfaceWrapper{Handler: srv}
+	app.Post("/dummyLogin", wrapper.PostDummyLogin)
+	app.Post("/login", wrapper.PostLogin)
+	app.Post("/register", wrapper.PostRegister)
+	app.Post("/pvz", middleware.AuthMiddleware, middleware.RoleMiddleware("moderator"), wrapper.PostPvz)
+	app.Post("/products", middleware.AuthMiddleware, middleware.RoleMiddleware("employee"), wrapper.PostProducts)
+	app.Post("/receptions", middleware.AuthMiddleware, middleware.RoleMiddleware("employee"), wrapper.PostReceptions)
+	app.Post("/pvz/:pvzId/close_last_reception", middleware.AuthMiddleware,
+		middleware.RoleMiddleware("employee"), wrapper.PostPvzPvzIdCloseLastReception)
+	app.Post("/pvz/:pvzId/delete_last_product",
+		middleware.AuthMiddleware, middleware.RoleMiddleware("employee"), wrapper.PostPvzPvzIdDeleteLastProduct)
+	app.Get("/pvz", middleware.AuthMiddleware, middleware.RoleMiddleware("employee", "moderator"), wrapper.GetPvz)
 }

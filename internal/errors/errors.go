@@ -10,9 +10,14 @@ var (
 	ErrUserNotFound      = errors.New("пользователь не найден")
 	ErrUserAlreadyExists = errors.New("пользователь с таким email существует")
 	ErrInvalidPassword   = errors.New("неверный пароль")
-	ErrInvalidRole       = errors.New("неверная роль")
+	ErrInvalidRole       = errors.New("некорректная роль")
 	ErrInsertPVZFailed   = errors.New("ошибка добавления ПВЗ")
 	ErrInvalidPVZCity    = errors.New("некорректный город")
+
+	ErrMissingAuthHeader       = errors.New("отсутствует заголовок авторизации")
+	ErrInvalidAuthHeader       = errors.New("некорректный заголовок авторизации")
+	ErrInvalidToken            = errors.New("некорректный токен: ")
+	ErrInsufficientPermissions = errors.New("недостаточно прав")
 )
 
 func GetErrorStatusCode(err error) int {

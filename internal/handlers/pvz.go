@@ -21,7 +21,7 @@ func (h *PVZHandler) PostPvz(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	pvz, err := h.pvzService.CreatePVZ(req)
+	pvz, err := h.pvzService.CreatePVZ(c.UserContext(), req)
 	if err != nil {
 		status := pvz_errors.GetErrorStatusCode(err)
 		return fiber.NewError(status, err.Error())

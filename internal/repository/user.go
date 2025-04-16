@@ -24,8 +24,7 @@ func NewUserRepository(dbConn *pgxpool.Pool) UserRepository {
 }
 
 func (r *userRepository) InsertUser(ctx context.Context, id uuid.UUID, email, password, role string) error {
-	ct, err := r.db.Exec(ctx, `INSERT INTO users (id, email, password, role) VALUES ($1, $2, $3, $4)
-                       			ON CONFLICT (email) DO NOTHING`, id, email, password, role)
+	ct, err := r.db.Exec(ctx, QueryInsertUser, id, email, password, role)
 	if err != nil {
 		return err
 	}
@@ -39,7 +38,7 @@ func (r *userRepository) GetUserByEmail(ctx context.Context, email string) (uuid
 	var id uuid.UUID
 	var password string
 	var role string
-	err := r.db.QueryRow(ctx, `SELECT id, password, role FROM users WHERE email = $1`, email).Scan(&id, &password, &role)
+	err := r.db.QueryRow(ctx, QueryUserByEmail, email).Scan(&id, &password, &role)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return uuid.Nil, "", "", pvz_errors.ErrUserNotFound

@@ -11,7 +11,7 @@ import (
 )
 
 type PVZService interface {
-	CreatePVZ(req gen.PostPvzJSONRequestBody) (gen.PVZ, error)
+	CreatePVZ(ctx context.Context, req gen.PostPvzJSONRequestBody) (gen.PVZ, error)
 }
 
 type pvzService struct {
@@ -24,7 +24,7 @@ func NewPVZService(pvzRepository repository.PVZRepository) PVZService {
 	}
 }
 
-func (s *pvzService) CreatePVZ(req gen.PostPvzJSONRequestBody) (gen.PVZ, error) {
+func (s *pvzService) CreatePVZ(ctx context.Context, req gen.PostPvzJSONRequestBody) (gen.PVZ, error) {
 	switch req.City {
 	case gen.Казань, gen.Москва, gen.СанктПетербург:
 	default:
@@ -32,7 +32,7 @@ func (s *pvzService) CreatePVZ(req gen.PostPvzJSONRequestBody) (gen.PVZ, error) 
 	}
 
 	now := time.Now()
-	pvz, err := s.pvzRepo.InsertPVZ(context.Background(), req.City, now)
+	pvz, err := s.pvzRepo.InsertPVZ(ctx, req.City, now)
 	if err != nil {
 		return gen.PVZ{}, fmt.Errorf("%w: %s", pvz_errors.ErrInsertPVZFailed, err.Error())
 	}

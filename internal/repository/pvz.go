@@ -30,9 +30,7 @@ func (r *pvzRepository) InsertPVZ(ctx context.Context, city gen.PVZCity, registr
 	var outCity string
 	var regDate time.Time
 
-	err := r.db.QueryRow(ctx, `INSERT INTO pvz (id, city, registration_date)
-								VALUES ($1, $2, $3)
-								RETURNING id, city, registration_date;`, newPvzID, string(city), registrationDate).
+	err := r.db.QueryRow(ctx, QueryInsertPVZ, newPvzID, string(city), registrationDate).
 		Scan(&id, &outCity, &regDate)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

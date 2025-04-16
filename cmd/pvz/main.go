@@ -23,10 +23,6 @@ func main() {
 
 	if fiber.IsChild() || !isPrefork {
 		dbConn, err = database.GetInitializedDB()
-		app.Use(func(c *fiber.Ctx) error {
-			c.Locals("db", dbConn)
-			return c.Next()
-		})
 		if err != nil {
 			log.Fatalf("db connection error: %v", err)
 		}

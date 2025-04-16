@@ -18,22 +18,18 @@ type Server struct {
 }
 
 func (srv *Server) PostDummyLogin(c *fiber.Ctx) error {
-
 	return srv.AuthHandler.PostDummyLogin(c)
 }
 
 func (srv *Server) PostLogin(c *fiber.Ctx) error {
-
 	return srv.AuthHandler.PostLogin(c)
 }
 
 func (srv *Server) PostRegister(c *fiber.Ctx) error {
-
 	return srv.AuthHandler.PostRegister(c)
 }
 
 func (srv *Server) PostPvz(c *fiber.Ctx) error {
-
 	return srv.PVZHandler.PostPvz(c)
 }
 
@@ -79,5 +75,4 @@ func NewServer(conn *pgxpool.Pool) *Server {
 		ProductHandler:   productHandler,
 		ReceptionHandler: receptionHandler,
 	}
-
 }

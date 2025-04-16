@@ -28,9 +28,28 @@ func (h *AuthHandler) PostDummyLogin(c *fiber.Ctx) error {
 }
 
 func (h *AuthHandler) PostRegister(c *fiber.Ctx) error {
-	return nil
+	var req gen.PostRegisterJSONRequestBody
+	if err := c.BodyParser(&req); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	user, err := h.authService.RegisterUser(c.UserContext(), req)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+	c.Status(fiber.StatusCreated)
+	return c.JSON(user)
 }
 
 func (h *AuthHandler) PostLogin(c *fiber.Ctx) error {
-	return nil
+	var req gen.PostLoginJSONRequestBody
+	if err := c.BodyParser(&req); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	token, err := h.authService.LoginUser(c.UserContext(), req)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(token)
 }

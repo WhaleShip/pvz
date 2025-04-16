@@ -2,9 +2,9 @@ package service
 
 import (
 	"context"
-	"errors"
 
 	"github.com/google/uuid"
+	pvz_errors "github.com/whaleship/pvz/internal/errors"
 	"github.com/whaleship/pvz/internal/gen"
 	"github.com/whaleship/pvz/internal/repository"
 	"github.com/whaleship/pvz/internal/utils"
@@ -26,7 +26,7 @@ func NewAuthService(userRepo repository.UserRepository) AuthService {
 
 func (s *authService) RegisterUser(ctx context.Context, req gen.PostRegisterJSONRequestBody) (gen.User, error) {
 	if req.Role != gen.Employee && req.Role != gen.Moderator {
-		return gen.User{}, errors.New("invalid role")
+		return gen.User{}, pvz_errors.ErrInvalidRole
 	}
 	hashedPass, err := utils.HashPassword(req.Password)
 	if err != nil {
@@ -49,7 +49,7 @@ func (s *authService) LoginUser(ctx context.Context, req gen.PostLoginJSONReques
 		return "", err
 	}
 	if !utils.IsCorrectPassword(hashed, req.Password) {
-		return "", errors.New("invalid password")
+		return "", pvz_errors.ErrInvalidPassword
 	}
 	token, err := utils.GenerateJWT(id, role)
 	if err != nil {
@@ -61,7 +61,7 @@ func (s *authService) LoginUser(ctx context.Context, req gen.PostLoginJSONReques
 func (s *authService) DummyLogin(req gen.PostDummyLoginJSONRequestBody) (string, error) {
 	role := req.Role
 	if role != gen.PostDummyLoginJSONBodyRoleModerator && role != gen.PostDummyLoginJSONBodyRoleEmployee {
-		return "", errors.New("invalid token")
+		return "", pvz_errors.ErrInvalidRole
 	}
 
 	token, err := utils.GenerateJWT(uuid.New(), string(role))

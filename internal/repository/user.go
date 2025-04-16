@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	pvz_errors "github.com/whaleship/pvz/internal/errors"
 )
 
 type UserRepository interface {
@@ -28,9 +29,8 @@ func (r *userRepository) InsertUser(ctx context.Context, id uuid.UUID, email, pa
 	if err != nil {
 		return err
 	}
-
 	if ct.RowsAffected() == 0 {
-		return errors.New("user exist")
+		return pvz_errors.ErrUserAlreadyExists
 	}
 	return nil
 }
@@ -42,7 +42,7 @@ func (r *userRepository) GetUserByEmail(ctx context.Context, email string) (uuid
 	err := r.db.QueryRow(ctx, `SELECT id, password, role FROM users WHERE email = $1`, email).Scan(&id, &password, &role)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return uuid.Nil, "", "", errors.New("user not found")
+			return uuid.Nil, "", "", pvz_errors.ErrUserNotFound
 		}
 		return uuid.Nil, "", "", err
 	}

@@ -16,7 +16,7 @@ import (
 
 type PVZService interface {
 	CreatePVZ(ctx context.Context, req gen.PostPvzJSONRequestBody) (gen.PVZ, error)
-	GetPVZ(ctx context.Context, params gen.GetPvzParams) (dto.PVZResponse, error)
+	GetPVZ(ctx context.Context, params gen.GetPvzParams) ([]dto.PVZWithReceptions, error)
 }
 
 type pvzService struct {
@@ -26,10 +26,12 @@ type pvzService struct {
 	metrics       *infrastructure.IPCManager
 }
 
-func NewPVZService(pvzRepository repository.PVZRepository,
+func NewPVZService(
+	pvzRepository repository.PVZRepository,
 	receptionRepository repository.ReceptionRepository,
 	productRepository repository.ProductRepository,
-	aggregator *infrastructure.IPCManager) PVZService {
+	aggregator *infrastructure.IPCManager,
+) PVZService {
 	return &pvzService{
 		pvzRepo:       pvzRepository,
 		receptionRepo: receptionRepository,
@@ -37,7 +39,6 @@ func NewPVZService(pvzRepository repository.PVZRepository,
 		metrics:       aggregator,
 	}
 }
-
 func (s *pvzService) CreatePVZ(ctx context.Context, req gen.PostPvzJSONRequestBody) (gen.PVZ, error) {
 	switch req.City {
 	case gen.Казань, gen.Москва, gen.СанктПетербург:
@@ -59,67 +60,87 @@ func (s *pvzService) CreatePVZ(ctx context.Context, req gen.PostPvzJSONRequestBo
 }
 
 func (s *pvzService) aggregatePVZData(ctx context.Context, pvzList []gen.PVZ) ([]dto.PVZWithReceptions, error) {
-	aggregated := make([]dto.PVZWithReceptions, 0, len(pvzList))
+	aggregated := make([]dto.Reception, 0, len(pvzList))
 	for _, pvz := range pvzList {
-		receptions, err := s.receptionRepo.GetReceptionsByPVZ(ctx, *pvz.Id)
+		recs, err := s.receptionRepo.GetReceptionsByPVZ(ctx, *pvz.Id)
 		if err != nil {
-			return nil, fmt.Errorf("%w: %s", pvz_errors.ErrSelectReceptionsFailed, err.Error())
+			return nil, fmt.Errorf("%w: %w", pvz_errors.ErrSelectReceptionsFailed, err)
 		}
+		aggregated = append(aggregated, recs...)
+	}
 
-		var receptionIDs []*uuid.UUID
-		for _, rec := range receptions {
-			if rec.Id != nil {
-				receptionIDs = append(receptionIDs, rec.Id)
+	var receptions []*uuid.UUID
+	for _, r := range aggregated {
+		if r.Id != nil {
+			receptions = append(receptions, r.Id)
+		}
+	}
+
+	var products []gen.Product
+	if len(receptions) > 0 {
+		var err error
+		products, err = s.productRepo.GetProductsByReceptionIDs(ctx, receptions)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %w", pvz_errors.ErrSelectProductsFailed, err)
+		}
+	}
+
+	prodByRec := make(map[string][]gen.Product, len(products))
+	for _, p := range products {
+		key := p.ReceptionId.String()
+		prodByRec[key] = append(prodByRec[key], p)
+	}
+
+	result := make([]dto.PVZWithReceptions, 0, len(pvzList))
+	for _, pvz := range pvzList {
+		var group []dto.ReceptionWithProducts
+		for _, r := range aggregated {
+			if r.PvzId != *pvz.Id {
+				continue
 			}
-		}
-
-		var products []gen.Product
-		if len(receptionIDs) > 0 {
-			products, err = s.productRepo.GetProductsByReceptionIDs(ctx, receptionIDs)
-			if err != nil {
-				return nil, fmt.Errorf("%w: %s", pvz_errors.ErrSelectProductsFailed, err.Error())
-			}
-		}
-
-		productsByReception := make(map[string][]gen.Product)
-		for _, prod := range products {
-			key := prod.ReceptionId.String()
-			productsByReception[key] = append(productsByReception[key], prod)
-		}
-
-		var recWithProducts []dto.ReceptionWithProducts
-		for _, rec := range receptions {
 			key := ""
-			if rec.Id != nil {
-				key = rec.Id.String()
+			if r.Id != nil {
+				key = r.Id.String()
 			}
-			recWithProducts = append(recWithProducts, dto.ReceptionWithProducts{
-				Reception: rec,
-				Products:  productsByReception[key],
+			group = append(group, dto.ReceptionWithProducts{
+				Reception: r,
+				Products:  prodByRec[key],
 			})
 		}
-
-		aggregated = append(aggregated, dto.PVZWithReceptions{
+		result = append(result, dto.PVZWithReceptions{
 			Pvz:        pvz,
-			Receptions: recWithProducts,
+			Receptions: group,
 		})
 	}
-	return aggregated, nil
+
+	return result, nil
 }
 
-func (s *pvzService) GetPVZ(ctx context.Context, params gen.GetPvzParams) (dto.PVZResponse, error) {
-	pvzList, err := s.pvzRepo.SelectPVZ(ctx, params)
+func (s *pvzService) GetPVZ(ctx context.Context, params gen.GetPvzParams) ([]dto.PVZWithReceptions, error) {
+	page, limit := 1, 10
+	if params.Page != nil && *params.Page > 0 {
+		page = *params.Page
+	}
+	if params.Limit != nil && *params.Limit > 0 {
+		limit = *params.Limit
+	}
+	offset := (page - 1) * limit
+
+	pvzList, err := s.pvzRepo.SelectPVZByOpenReceptions(
+		ctx,
+		params.StartDate.UTC(),
+		params.EndDate.UTC(),
+		limit,
+		offset,
+	)
 	if err != nil {
-		return dto.PVZResponse{}, fmt.Errorf("%w: %s", pvz_errors.ErrSelectPVZFailed, err.Error())
+		return []dto.PVZWithReceptions{}, fmt.Errorf("%w: %w", pvz_errors.ErrSelectPVZFailed, err)
 	}
 
 	aggregated, err := s.aggregatePVZData(ctx, pvzList)
 	if err != nil {
-		return dto.PVZResponse{}, err
+		return []dto.PVZWithReceptions{}, err
 	}
 
-	response := dto.PVZResponse{
-		PvzWithReceptions: aggregated,
-	}
-	return response, nil
+	return aggregated, nil
 }

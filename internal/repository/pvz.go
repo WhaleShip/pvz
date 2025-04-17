@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,9 +15,12 @@ import (
 
 type PVZRepository interface {
 	InsertPVZ(ctx context.Context, city gen.PVZCity, registrationDate time.Time) (gen.PVZ, error)
-	SelectPVZ(ctx context.Context, params gen.GetPvzParams) ([]gen.PVZ, error)
+	SelectPVZByOpenReceptions(
+		ctx context.Context,
+		startDate, endDate time.Time,
+		limit, offset int,
+	) ([]gen.PVZ, error)
 }
-
 type pvzRepository struct {
 	db *pgxpool.Pool
 }
@@ -49,74 +51,34 @@ func (r *pvzRepository) InsertPVZ(ctx context.Context, city gen.PVZCity, registr
 	}, nil
 }
 
-func (r *pvzRepository) SelectPVZ(ctx context.Context, params gen.GetPvzParams) ([]gen.PVZ, error) {
-	query, args := r.buildPVZQuery(params)
-	rows, err := r.db.Query(ctx, query, args...)
+func (r *pvzRepository) SelectPVZByOpenReceptions(
+	ctx context.Context,
+	startDate, endDate time.Time,
+	limit, offset int,
+) ([]gen.PVZ, error) {
+	rows, err := r.db.Query(ctx,
+		QuerySelectPvzByOpenReceptions,
+		startDate, endDate,
+		limit, offset,
+	)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, pvz_errors.ErrSelectPVZFailed
-		}
-		return nil, err
+		return nil, fmt.Errorf("%w: %w", pvz_errors.ErrSelectPVZFailed, err)
 	}
 	defer rows.Close()
 
-	var pvzList []gen.PVZ
+	var list []gen.PVZ
 	for rows.Next() {
 		var id uuid.UUID
 		var city string
 		var regDate time.Time
-		if err = rows.Scan(&id, &city, &regDate); err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return nil, pvz_errors.ErrSelectPVZFailed
-			}
+		if err := rows.Scan(&id, &city, &regDate); err != nil {
 			return nil, err
 		}
-		pvzList = append(pvzList, gen.PVZ{
+		list = append(list, gen.PVZ{
 			Id:               &id,
 			City:             gen.PVZCity(city),
 			RegistrationDate: &regDate,
 		})
 	}
-	if err = rows.Err(); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, pvz_errors.ErrSelectPVZFailed
-		}
-		return nil, err
-	}
-	return pvzList, nil
-}
-
-func (r *pvzRepository) buildPVZQuery(params gen.GetPvzParams) (string, []interface{}) {
-	baseQuery := QuerySelectPVZ
-	var args []interface{}
-	var conditions []string
-
-	if params.StartDate != nil {
-		conditions = append(conditions, "registration_date >= $1")
-		args = append(args, *params.StartDate)
-	}
-	if params.EndDate != nil {
-		conditions = append(conditions, "registration_date <= $2")
-		args = append(args, *params.EndDate)
-	}
-	query := baseQuery
-	if len(conditions) > 0 {
-		query += " WHERE " + strings.Join(conditions, " AND ")
-	}
-
-	page := 1
-	limit := 10
-	if params.Page != nil && *params.Page > 0 {
-		page = *params.Page
-	}
-	if params.Limit != nil && *params.Limit > 0 {
-		limit = *params.Limit
-	}
-	offset := (page - 1) * limit
-
-	nextPlaceholder := len(args) + 1
-	query += fmt.Sprintf(" ORDER BY registration_date DESC LIMIT $%d OFFSET $%d", nextPlaceholder, nextPlaceholder+1)
-	args = append(args, limit, offset)
-
-	return query, args
+	return list, rows.Err()
 }

@@ -16,11 +16,22 @@ const (
 							RETURNING id, city, registration_date;`
 
 	QueryGetProductsByReceptions = `SELECT id, reception_id, date_time, type
-							FROM products
-							WHERE reception_id = ANY($1)
-							ORDER BY date_time DESC`
+									FROM products
+									WHERE reception_id = ANY($1)
+									ORDER BY date_time DESC`
 
-	QuerySelectPVZ = `SELECT id, city, registration_date FROM pvz`
+	QuerySelectPvzByOpenReceptions = `WITH qualified_pvzs AS (
+										SELECT DISTINCT pvz_id
+										FROM receptions
+										WHERE date_time <= $2
+										AND (close_date_time >= $1 OR close_date_time IS NULL)
+									)
+									SELECT id, city, registration_date
+									FROM pvz
+									WHERE id IN (SELECT pvz_id FROM qualified_pvzs)
+									ORDER BY registration_date DESC
+									LIMIT $3 OFFSET $4;
+									`
 
 	// recepiton
 	QueryInsertReception = `WITH locked AS (
@@ -35,17 +46,19 @@ const (
 							RETURNING id`
 
 	QueryCloseActiveReception = `WITH active AS (
-									SELECT id 
+									SELECT id
 									FROM receptions 
 									WHERE pvz_id = $1 AND status = 'in_progress'
 									ORDER BY date_time DESC
 									LIMIT 1
 									FOR UPDATE
-									)
+								)
 								UPDATE receptions
-								SET status = 'close'
+								SET 
+									status = 'close',
+									close_date_time = NOW()
 								WHERE id IN (SELECT id FROM active)
-								RETURNING id;`
+								RETURNING id, date_time;`
 
 	QueryGetReceptionsByPVZs = `SELECT id, pvz_id, date_time, status
 								FROM receptions

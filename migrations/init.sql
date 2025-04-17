@@ -20,6 +20,7 @@ CREATE TABLE receptions (
     id UUID PRIMARY KEY,
     pvz_id UUID NOT NULL,
     date_time TIMESTAMP NOT NULL DEFAULT NOW(),
+    close_date_time TIMESTAMP NULL,
     status VARCHAR(50) NOT NULL CHECK (status IN ('in_progress', 'close')),
     CONSTRAINT fk_receptions_pvz
         FOREIGN KEY (pvz_id)
@@ -27,6 +28,7 @@ CREATE TABLE receptions (
             ON DELETE CASCADE
 );
 CREATE INDEX idx_receptions_pvz_date ON receptions(pvz_id, date_time DESC);
+CREATE INDEX idx_receptions_pvz_close_date ON receptions(pvz_id, close_date_time DESC);
 
 CREATE INDEX idx_receptions_active
     ON receptions(pvz_id, date_time DESC)

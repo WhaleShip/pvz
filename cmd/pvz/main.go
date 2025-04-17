@@ -2,14 +2,19 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/whaleship/pvz/internal/config"
 	"github.com/whaleship/pvz/internal/database"
+	"github.com/whaleship/pvz/internal/infrastructure"
+	"github.com/whaleship/pvz/internal/metrics"
 	"github.com/whaleship/pvz/internal/server"
 )
 
@@ -20,15 +25,43 @@ func main() {
 	var dbConn *pgxpool.Pool
 	var err error
 
+	techBuffer := 200
+	businessBuffer := 400
+	if isPrefork {
+		techBuffer = 20
+		businessBuffer = 40
+	}
+
+	aggregator := metrics.NewAggregator()
+	ipcManager := infrastructure.NewIPCManager(config.IpcSockPath, techBuffer, businessBuffer, aggregator)
+
 	if fiber.IsChild() || !isPrefork {
 		dbConn, err = database.GetInitializedDB()
 		if err != nil {
 			log.Fatalf("db connection error: %v", err)
 		}
 		defer dbConn.Close()
+
+		ipcManager.StartSender()
 	}
 
-	srv := server.NewServer(dbConn)
+	if !fiber.IsChild() {
+		ipcManager.StartServer()
+		go func() {
+			http.HandleFunc("/metrics", aggregator.HTTPHandler())
+			srv := &http.Server{
+				Addr:         ":9000",
+				ReadTimeout:  10 * time.Second,
+				WriteTimeout: 10 * time.Second,
+			}
+			log.Println("metrics are available on :9000/metrics")
+			if err := srv.ListenAndServe(); err != nil {
+				log.Fatalf("metrics server error: %v", err)
+			}
+		}()
+	}
+
+	srv := server.NewServer(dbConn, ipcManager)
 	srv.RegisterAllHandlers(app)
 
 	quit := make(chan os.Signal, 1)

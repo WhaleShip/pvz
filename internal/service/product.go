@@ -6,6 +6,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/whaleship/pvz/internal/gen"
+	"github.com/whaleship/pvz/internal/infrastructure"
+	"github.com/whaleship/pvz/internal/metrics"
 	"github.com/whaleship/pvz/internal/repository"
 )
 
@@ -16,11 +18,13 @@ type ProductService interface {
 
 type productService struct {
 	productRepo repository.ProductRepository
+	metrics     *infrastructure.IPCManager
 }
 
-func NewProductService(repo repository.ProductRepository) ProductService {
+func NewProductService(repo repository.ProductRepository, aggregator *infrastructure.IPCManager) ProductService {
 	return &productService{
 		productRepo: repo,
+		metrics:     aggregator,
 	}
 }
 
@@ -37,6 +41,10 @@ func (s *productService) AddProduct(ctx context.Context, req gen.PostProductsJSO
 		ReceptionId: receptionID,
 		Type:        gen.ProductType(req.Type),
 	}
+
+	s.metrics.ReportMetrics(metrics.MetricsUpdate{
+		ProductsAddedDelta: 1,
+	})
 
 	return product, nil
 }

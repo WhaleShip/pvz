@@ -9,6 +9,8 @@ import (
 	"github.com/whaleship/pvz/internal/dto"
 	pvz_errors "github.com/whaleship/pvz/internal/errors"
 	"github.com/whaleship/pvz/internal/gen"
+	"github.com/whaleship/pvz/internal/infrastructure"
+	"github.com/whaleship/pvz/internal/metrics"
 	"github.com/whaleship/pvz/internal/repository"
 )
 
@@ -21,15 +23,18 @@ type pvzService struct {
 	pvzRepo       repository.PVZRepository
 	receptionRepo repository.ReceptionRepository
 	productRepo   repository.ProductRepository
+	metrics       *infrastructure.IPCManager
 }
 
 func NewPVZService(pvzRepository repository.PVZRepository,
 	receptionRepository repository.ReceptionRepository,
-	productRepository repository.ProductRepository) PVZService {
+	productRepository repository.ProductRepository,
+	aggregator *infrastructure.IPCManager) PVZService {
 	return &pvzService{
 		pvzRepo:       pvzRepository,
 		receptionRepo: receptionRepository,
 		productRepo:   productRepository,
+		metrics:       aggregator,
 	}
 }
 
@@ -45,6 +50,10 @@ func (s *pvzService) CreatePVZ(ctx context.Context, req gen.PostPvzJSONRequestBo
 	if err != nil {
 		return gen.PVZ{}, fmt.Errorf("%w: %s", pvz_errors.ErrInsertPVZFailed, err.Error())
 	}
+
+	s.metrics.ReportMetrics(metrics.MetricsUpdate{
+		PvzCreatedDelta: 1,
+	})
 
 	return pvz, nil
 }

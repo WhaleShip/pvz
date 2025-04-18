@@ -2,11 +2,12 @@ package server
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
+	"github.com/whaleship/pvz/internal/database"
 	"github.com/whaleship/pvz/internal/gen/oapi"
+	grpc_handlers "github.com/whaleship/pvz/internal/handlers/grpc"
 	http_handlers "github.com/whaleship/pvz/internal/handlers/http"
-	"github.com/whaleship/pvz/internal/infrastructure"
+	"github.com/whaleship/pvz/internal/metrics"
 	"github.com/whaleship/pvz/internal/repository"
 	"github.com/whaleship/pvz/internal/service"
 )
@@ -16,8 +17,8 @@ type Server struct {
 	PVZHandler       *http_handlers.PVZHandler
 	ProductHandler   *http_handlers.ProductHandler
 	ReceptionHandler *http_handlers.ReceptionHandler
-	Metrics          *infrastructure.IPCManager
-	pvzService       service.PVZService
+	Metrics          metrics.MetricsSender
+	pvzService       grpc_handlers.PVZService
 }
 
 func (srv *Server) PostDummyLogin(c *fiber.Ctx) error {
@@ -56,7 +57,7 @@ func (srv *Server) PostReceptions(c *fiber.Ctx) error {
 	return srv.ReceptionHandler.PostReception(c)
 }
 
-func NewServer(conn *pgxpool.Pool, ipcManager *infrastructure.IPCManager) *Server {
+func NewServer(conn database.PgxIface, ipcManager metrics.MetricsSender) *Server {
 	userRepo := repository.NewUserRepository(conn)
 	pvzRepo := repository.NewPVZRepository(conn)
 	productRepo := repository.NewProductRepository(conn)

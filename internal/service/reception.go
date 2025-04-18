@@ -5,22 +5,20 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/whaleship/pvz/internal/gen/oapi"
-	"github.com/whaleship/pvz/internal/infrastructure"
 	"github.com/whaleship/pvz/internal/metrics"
-	"github.com/whaleship/pvz/internal/repository"
 )
 
-type ReceptionService interface {
-	CreateReception(req oapi.PostReceptionsJSONRequestBody) (oapi.Reception, error)
-	CloseLastReception(pvzID uuid.UUID) (oapi.Reception, error)
+type receptionRepoWriter interface {
+	CreateReception(ctx context.Context, req oapi.PostReceptionsJSONRequestBody) (oapi.Reception, error)
+	CloseLastReception(ctx context.Context, pvzID uuid.UUID) (oapi.Reception, error)
 }
 
 type receptionService struct {
-	receptionRepo repository.ReceptionRepository
-	metrics       *infrastructure.IPCManager
+	receptionRepo receptionRepoWriter
+	metrics       metrics.MetricsSender
 }
 
-func NewReceptionService(repo repository.ReceptionRepository, aggregator *infrastructure.IPCManager) ReceptionService {
+func NewReceptionService(repo receptionRepoWriter, aggregator metrics.MetricsSender) *receptionService {
 	return &receptionService{
 		receptionRepo: repo,
 		metrics:       aggregator,
@@ -33,7 +31,7 @@ func (s *receptionService) CreateReception(req oapi.PostReceptionsJSONRequestBod
 		return oapi.Reception{}, err
 	}
 
-	s.metrics.ReportMetrics(metrics.MetricsUpdate{
+	s.metrics.SendBusinessMetricsUpdate(metrics.MetricsUpdate{
 		ReceptionsCreatedDelta: 1,
 	})
 

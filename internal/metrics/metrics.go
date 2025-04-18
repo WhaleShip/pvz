@@ -16,3 +16,8 @@ type MetricsUpdate struct {
 	ReceptionsCreatedDelta int64   `json:"receptions_created_delta"`
 	ProductsAddedDelta     int64   `json:"products_added_delta"`
 }
+
+type MetricsSender interface {
+	SendBusinessMetricsUpdate(update MetricsUpdate)
+	SendTechMetricsUpdate(update MetricsUpdate)
+}

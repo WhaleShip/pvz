@@ -7,32 +7,25 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/whaleship/pvz/internal/database"
 	pvz_errors "github.com/whaleship/pvz/internal/errors"
 	"github.com/whaleship/pvz/internal/gen/oapi"
 	"github.com/whaleship/pvz/internal/gen/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-type PVZRepository interface {
-	InsertPVZ(ctx context.Context, city oapi.PVZCity, registrationDate time.Time) (oapi.PVZ, error)
-	SelectPVZByOpenReceptions(
-		ctx context.Context,
-		startDate, endDate time.Time,
-		limit, offset int,
-	) ([]oapi.PVZ, error)
-	SelectAllPVZs(ctx context.Context) ([]*proto.PVZ, error)
-}
 type pvzRepository struct {
-	db *pgxpool.Pool
+	db database.PgxIface
 }
 
-func NewPVZRepository(dbConn *pgxpool.Pool) PVZRepository {
+func NewPVZRepository(dbConn database.PgxIface) *pvzRepository {
 	return &pvzRepository{db: dbConn}
 }
 
-func (r *pvzRepository) InsertPVZ(ctx context.Context, city oapi.PVZCity, registrationDate time.Time) (oapi.PVZ, error) {
+func (r *pvzRepository) InsertPVZ(
+	ctx context.Context,
+	city oapi.PVZCity,
+	registrationDate time.Time) (oapi.PVZ, error) {
 	newPvzID := uuid.New()
 	var id uuid.UUID
 	var outCity string
@@ -41,7 +34,7 @@ func (r *pvzRepository) InsertPVZ(ctx context.Context, city oapi.PVZCity, regist
 	err := r.db.QueryRow(ctx, QueryInsertPVZ, newPvzID, string(city), registrationDate).
 		Scan(&id, &outCity, &regDate)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, r.db.ErrNoRows()) {
 			return oapi.PVZ{}, pvz_errors.ErrInsertPVZFailed
 		}
 		return oapi.PVZ{}, err

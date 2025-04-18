@@ -1,18 +1,25 @@
 package http_handlers
 
 import (
+	"context"
+
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 	pvz_errors "github.com/whaleship/pvz/internal/errors"
 	"github.com/whaleship/pvz/internal/gen/oapi"
-	"github.com/whaleship/pvz/internal/service"
 )
 
-type ProductHandler struct {
-	productService service.ProductService
+type productService interface {
+	AddProduct(ctx context.Context, req oapi.PostProductsJSONRequestBody) (oapi.Product, error)
+	DeleteLastProduct(ctx context.Context, pvzID uuid.UUID) error
 }
 
-func NewProductHandler(prodSvc service.ProductService) *ProductHandler {
+type ProductHandler struct {
+	productService productService
+}
+
+func NewProductHandler(prodSvc productService) *ProductHandler {
 	return &ProductHandler{productService: prodSvc}
 }
 

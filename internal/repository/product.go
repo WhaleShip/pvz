@@ -6,27 +6,17 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/whaleship/pvz/internal/database"
 	pvz_errors "github.com/whaleship/pvz/internal/errors"
 	"github.com/whaleship/pvz/internal/gen/oapi"
 )
 
-type ProductRepository interface {
-	InsertProduct(ctx context.Context,
-		pvzID, productID uuid.UUID,
-		dateTime time.Time,
-		productType string) (uuid.UUID, error)
-	DeleteLastProduct(ctx context.Context, pvzID uuid.UUID) error
-	GetProductsByReceptionIDs(ctx context.Context, receptionIDs []*uuid.UUID) ([]oapi.Product, error)
-}
-
 type productRepository struct {
-	db *pgxpool.Pool
+	db database.PgxIface
 }
 
-func NewProductRepository(dbConn *pgxpool.Pool) ProductRepository {
+func NewProductRepository(dbConn database.PgxIface) *productRepository {
 	return &productRepository{db: dbConn}
 }
 
@@ -50,7 +40,7 @@ func (r *productRepository) InsertProduct(
 	err = tx.QueryRow(ctx, QueryInsertProduct, pvzID, productID, dateTime, productType).Scan(&receptionID)
 	if err != nil {
 		var pgErr *pgconn.PgError
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, r.db.ErrNoRows()) {
 			return uuid.Nil, pvz_errors.ErrNoOpenRecetionOrPvz
 		}
 		if pgErr.Code == "23514" {
@@ -95,7 +85,7 @@ func (r *productRepository) GetProductsByReceptionIDs(ctx context.Context,
 	receptionIDs []*uuid.UUID) ([]oapi.Product, error) {
 	rows, err := r.db.Query(ctx, QueryGetProductsByReceptions, receptionIDs)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, r.db.ErrNoRows()) {
 			return nil, pvz_errors.ErrSelectProductsFailed
 		}
 		return nil, err
@@ -109,7 +99,7 @@ func (r *productRepository) GetProductsByReceptionIDs(ctx context.Context,
 		var dt time.Time
 		var typ string
 		if err := rows.Scan(&id, &receptionId, &dt, &typ); err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
+			if errors.Is(err, r.db.ErrNoRows()) {
 				return nil, pvz_errors.ErrSelectProductsFailed
 			}
 			return nil, err
@@ -122,7 +112,7 @@ func (r *productRepository) GetProductsByReceptionIDs(ctx context.Context,
 		})
 	}
 	if err = rows.Err(); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, r.db.ErrNoRows()) {
 			return nil, pvz_errors.ErrSelectProductsFailed
 		}
 		return nil, err

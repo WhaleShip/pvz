@@ -10,30 +10,40 @@ import (
 	pvz_errors "github.com/whaleship/pvz/internal/errors"
 	"github.com/whaleship/pvz/internal/gen/oapi"
 	"github.com/whaleship/pvz/internal/gen/proto"
-	"github.com/whaleship/pvz/internal/infrastructure"
 	"github.com/whaleship/pvz/internal/metrics"
-	"github.com/whaleship/pvz/internal/repository"
 )
 
-type PVZService interface {
-	CreatePVZ(ctx context.Context, req oapi.PostPvzJSONRequestBody) (oapi.PVZ, error)
-	GetPVZ(ctx context.Context, params oapi.GetPvzParams) ([]dto.PVZWithReceptions, error)
-	GetAllPVZs(ctx context.Context) ([]*proto.PVZ, error)
+type productRepoReader interface {
+	GetProductsByReceptionIDs(ctx context.Context, receptionIDs []*uuid.UUID) ([]oapi.Product, error)
+}
+
+type receptionRepoReader interface {
+	GetReceptionsByPVZ(ctx context.Context, pvzID uuid.UUID) ([]dto.Reception, error)
+}
+
+type pvzRepository interface {
+	InsertPVZ(ctx context.Context, city oapi.PVZCity, registrationDate time.Time) (oapi.PVZ, error)
+	SelectPVZByOpenReceptions(
+		ctx context.Context,
+		startDate, endDate time.Time,
+		limit, offset int,
+	) ([]oapi.PVZ, error)
+	SelectAllPVZs(ctx context.Context) ([]*proto.PVZ, error)
 }
 
 type pvzService struct {
-	pvzRepo       repository.PVZRepository
-	receptionRepo repository.ReceptionRepository
-	productRepo   repository.ProductRepository
-	metrics       *infrastructure.IPCManager
+	pvzRepo       pvzRepository
+	receptionRepo receptionRepoReader
+	productRepo   productRepoReader
+	metrics       metrics.MetricsSender
 }
 
 func NewPVZService(
-	pvzRepository repository.PVZRepository,
-	receptionRepository repository.ReceptionRepository,
-	productRepository repository.ProductRepository,
-	aggregator *infrastructure.IPCManager,
-) PVZService {
+	pvzRepository pvzRepository,
+	receptionRepository receptionRepoReader,
+	productRepository productRepoReader,
+	aggregator metrics.MetricsSender,
+) *pvzService {
 	return &pvzService{
 		pvzRepo:       pvzRepository,
 		receptionRepo: receptionRepository,
@@ -55,7 +65,7 @@ func (s *pvzService) CreatePVZ(ctx context.Context, req oapi.PostPvzJSONRequestB
 		return oapi.PVZ{}, fmt.Errorf("%w: %s", pvz_errors.ErrInsertPVZFailed, err.Error())
 	}
 
-	s.metrics.ReportMetrics(metrics.MetricsUpdate{
+	s.metrics.SendBusinessMetricsUpdate(metrics.MetricsUpdate{
 		PvzCreatedDelta: 1,
 	})
 

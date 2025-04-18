@@ -6,25 +6,18 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/whaleship/pvz/internal/database"
 	"github.com/whaleship/pvz/internal/dto"
 	pvz_errors "github.com/whaleship/pvz/internal/errors"
 	"github.com/whaleship/pvz/internal/gen/oapi"
 )
 
-type ReceptionRepository interface {
-	CreateReception(ctx context.Context, req oapi.PostReceptionsJSONRequestBody) (oapi.Reception, error)
-	CloseLastReception(ctx context.Context, pvzID uuid.UUID) (oapi.Reception, error)
-	GetReceptionsByPVZ(ctx context.Context, pvzID uuid.UUID) ([]dto.Reception, error)
-}
-
 type receptionRepository struct {
-	db *pgxpool.Pool
+	db database.PgxIface
 }
 
-func NewReceptionRepository(dbConn *pgxpool.Pool) ReceptionRepository {
+func NewReceptionRepository(dbConn database.PgxIface) *receptionRepository {
 	return &receptionRepository{db: dbConn}
 }
 
@@ -51,7 +44,7 @@ func (r *receptionRepository) CreateReception(
 		now,
 	).Scan(&insertedID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, r.db.ErrNoRows()) {
 			return oapi.Reception{}, pvz_errors.ErrPVZNotFound
 		}
 		var pgErr *pgconn.PgError
@@ -99,7 +92,7 @@ func (r *receptionRepository) CloseLastReception(ctx context.Context, pvzID uuid
 	err = tx.QueryRow(ctx, QueryCloseActiveReception, pvzID).
 		Scan(&receptionID, &openTime)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, r.db.ErrNoRows()) {
 			return oapi.Reception{}, pvz_errors.ErrCloseReceptionFailed
 		}
 		return oapi.Reception{}, err
@@ -120,7 +113,7 @@ func (r *receptionRepository) CloseLastReception(ctx context.Context, pvzID uuid
 func (r *receptionRepository) GetReceptionsByPVZ(ctx context.Context, pvzID uuid.UUID) ([]dto.Reception, error) {
 	rows, err := r.db.Query(ctx, QueryGetReceptionsByPVZs, pvzID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, r.db.ErrNoRows()) {
 			return nil, pvz_errors.ErrSelectReceptionsFailed
 		}
 		return nil, err
@@ -137,7 +130,7 @@ func (r *receptionRepository) GetReceptionsByPVZ(ctx context.Context, pvzID uuid
 			status    string
 		)
 		if err := rows.Scan(&id, &pvzId, &openTime, &status); err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
+			if errors.Is(err, r.db.ErrNoRows()) {
 				return nil, pvz_errors.ErrSelectReceptionsFailed
 			}
 			return nil, err
@@ -151,7 +144,7 @@ func (r *receptionRepository) GetReceptionsByPVZ(ctx context.Context, pvzID uuid
 		})
 	}
 	if err = rows.Err(); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, r.db.ErrNoRows()) {
 			return nil, pvz_errors.ErrSelectReceptionsFailed
 		}
 		return nil, err

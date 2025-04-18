@@ -1,17 +1,24 @@
 package http_handlers
 
 import (
+	"context"
+
 	"github.com/gofiber/fiber/v2"
 	pvz_errors "github.com/whaleship/pvz/internal/errors"
 	"github.com/whaleship/pvz/internal/gen/oapi"
-	"github.com/whaleship/pvz/internal/service"
 )
 
-type AuthHandler struct {
-	authService service.AuthService
+type authService interface {
+	RegisterUser(ctx context.Context, req oapi.PostRegisterJSONRequestBody) (oapi.User, error)
+	LoginUser(ctx context.Context, req oapi.PostLoginJSONRequestBody) (string, error)
+	DummyLogin(req oapi.PostDummyLoginJSONRequestBody) (string, error)
 }
 
-func NewAuthHandler(authSvc service.AuthService) *AuthHandler {
+type AuthHandler struct {
+	authService authService
+}
+
+func NewAuthHandler(authSvc authService) *AuthHandler {
 	return &AuthHandler{authService: authSvc}
 }
 

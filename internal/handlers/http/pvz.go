@@ -1,17 +1,24 @@
 package http_handlers
 
 import (
+	"context"
+
 	"github.com/gofiber/fiber/v2"
+	"github.com/whaleship/pvz/internal/dto"
 	pvz_errors "github.com/whaleship/pvz/internal/errors"
 	"github.com/whaleship/pvz/internal/gen/oapi"
-	"github.com/whaleship/pvz/internal/service"
 )
 
-type PVZHandler struct {
-	pvzService service.PVZService
+type pvzService interface {
+	CreatePVZ(ctx context.Context, req oapi.PostPvzJSONRequestBody) (oapi.PVZ, error)
+	GetPVZ(ctx context.Context, params oapi.GetPvzParams) ([]dto.PVZWithReceptions, error)
 }
 
-func NewPVZHandler(pvzSvc service.PVZService) *PVZHandler {
+type PVZHandler struct {
+	pvzService pvzService
+}
+
+func NewPVZHandler(pvzSvc pvzService) *PVZHandler {
 	return &PVZHandler{pvzService: pvzSvc}
 }
 

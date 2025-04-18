@@ -6,21 +6,19 @@ import (
 	"github.com/google/uuid"
 	pvz_errors "github.com/whaleship/pvz/internal/errors"
 	"github.com/whaleship/pvz/internal/gen/oapi"
-	"github.com/whaleship/pvz/internal/repository"
 	"github.com/whaleship/pvz/internal/utils"
 )
 
-type AuthService interface {
-	RegisterUser(ctx context.Context, req oapi.PostRegisterJSONRequestBody) (oapi.User, error)
-	LoginUser(ctx context.Context, req oapi.PostLoginJSONRequestBody) (string, error)
-	DummyLogin(req oapi.PostDummyLoginJSONRequestBody) (string, error)
+type userRepository interface {
+	InsertUser(ctx context.Context, id uuid.UUID, email, password, role string) error
+	GetUserByEmail(ctx context.Context, email string) (uuid.UUID, string, string, error)
 }
 
 type authService struct {
-	userRepo repository.UserRepository
+	userRepo userRepository
 }
 
-func NewAuthService(userRepo repository.UserRepository) AuthService {
+func NewAuthService(userRepo userRepository) *authService {
 	return &authService{userRepo: userRepo}
 }
 

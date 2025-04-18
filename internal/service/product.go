@@ -6,22 +6,23 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/whaleship/pvz/internal/gen/oapi"
-	"github.com/whaleship/pvz/internal/infrastructure"
 	"github.com/whaleship/pvz/internal/metrics"
-	"github.com/whaleship/pvz/internal/repository"
 )
 
-type ProductService interface {
-	AddProduct(ctx context.Context, req oapi.PostProductsJSONRequestBody) (oapi.Product, error)
+type productRepoWriter interface {
+	InsertProduct(ctx context.Context,
+		pvzID, productID uuid.UUID,
+		dateTime time.Time,
+		productType string) (uuid.UUID, error)
 	DeleteLastProduct(ctx context.Context, pvzID uuid.UUID) error
 }
 
 type productService struct {
-	productRepo repository.ProductRepository
-	metrics     *infrastructure.IPCManager
+	productRepo productRepoWriter
+	metrics     metrics.MetricsSender
 }
 
-func NewProductService(repo repository.ProductRepository, aggregator *infrastructure.IPCManager) ProductService {
+func NewProductService(repo productRepoWriter, aggregator metrics.MetricsSender) *productService {
 	return &productService{
 		productRepo: repo,
 		metrics:     aggregator,
@@ -42,7 +43,7 @@ func (s *productService) AddProduct(ctx context.Context, req oapi.PostProductsJS
 		Type:        oapi.ProductType(req.Type),
 	}
 
-	s.metrics.ReportMetrics(metrics.MetricsUpdate{
+	s.metrics.SendBusinessMetricsUpdate(metrics.MetricsUpdate{
 		ProductsAddedDelta: 1,
 	})
 

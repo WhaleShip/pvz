@@ -2,17 +2,21 @@ package http_handlers
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 	pvz_errors "github.com/whaleship/pvz/internal/errors"
 	"github.com/whaleship/pvz/internal/gen/oapi"
-	"github.com/whaleship/pvz/internal/service"
 )
 
+type receptionService interface {
+	CreateReception(req oapi.PostReceptionsJSONRequestBody) (oapi.Reception, error)
+	CloseLastReception(pvzID uuid.UUID) (oapi.Reception, error)
+}
 type ReceptionHandler struct {
-	receptionService service.ReceptionService
+	receptionService receptionService
 }
 
-func NewReceptionHandler(receptSvc service.ReceptionService) *ReceptionHandler {
+func NewReceptionHandler(receptSvc receptionService) *ReceptionHandler {
 	return &ReceptionHandler{receptionService: receptSvc}
 }
 

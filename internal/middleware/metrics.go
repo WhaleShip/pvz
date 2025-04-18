@@ -4,11 +4,10 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/whaleship/pvz/internal/infrastructure"
 	"github.com/whaleship/pvz/internal/metrics"
 )
 
-func MetricsMiddleware(handlerName string, ipcManager *infrastructure.IPCManager) fiber.Handler {
+func MetricsMiddleware(handlerName string, ipcManager metrics.MetricsSender) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		start := time.Now()
 		err := c.Next()

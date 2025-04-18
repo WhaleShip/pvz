@@ -5,21 +5,15 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/whaleship/pvz/internal/database"
 	pvz_errors "github.com/whaleship/pvz/internal/errors"
 )
 
-type UserRepository interface {
-	InsertUser(ctx context.Context, id uuid.UUID, email, password, role string) error
-	GetUserByEmail(ctx context.Context, email string) (uuid.UUID, string, string, error)
-}
-
 type userRepository struct {
-	db *pgxpool.Pool
+	db database.PgxIface
 }
 
-func NewUserRepository(dbConn *pgxpool.Pool) UserRepository {
+func NewUserRepository(dbConn database.PgxIface) *userRepository {
 	return &userRepository{db: dbConn}
 }
 
@@ -40,7 +34,7 @@ func (r *userRepository) GetUserByEmail(ctx context.Context, email string) (uuid
 	var role string
 	err := r.db.QueryRow(ctx, QueryUserByEmail, email).Scan(&id, &password, &role)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, r.db.ErrNoRows()) {
 			return uuid.Nil, "", "", pvz_errors.ErrUserNotFound
 		}
 		return uuid.Nil, "", "", err

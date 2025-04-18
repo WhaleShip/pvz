@@ -11,12 +11,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/whaleship/pvz/internal/dto"
 	pvz_errors "github.com/whaleship/pvz/internal/errors"
-	"github.com/whaleship/pvz/internal/gen"
+	"github.com/whaleship/pvz/internal/gen/oapi"
 )
 
 type ReceptionRepository interface {
-	CreateReception(ctx context.Context, req gen.PostReceptionsJSONRequestBody) (gen.Reception, error)
-	CloseLastReception(ctx context.Context, pvzID uuid.UUID) (gen.Reception, error)
+	CreateReception(ctx context.Context, req oapi.PostReceptionsJSONRequestBody) (oapi.Reception, error)
+	CloseLastReception(ctx context.Context, pvzID uuid.UUID) (oapi.Reception, error)
 	GetReceptionsByPVZ(ctx context.Context, pvzID uuid.UUID) ([]dto.Reception, error)
 }
 
@@ -30,10 +30,10 @@ func NewReceptionRepository(dbConn *pgxpool.Pool) ReceptionRepository {
 
 func (r *receptionRepository) CreateReception(
 	ctx context.Context,
-	req gen.PostReceptionsJSONRequestBody) (gen.Reception, error) {
+	req oapi.PostReceptionsJSONRequestBody) (oapi.Reception, error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
-		return gen.Reception{}, err
+		return oapi.Reception{}, err
 	}
 	defer func() {
 		if err != nil {
@@ -52,38 +52,38 @@ func (r *receptionRepository) CreateReception(
 	).Scan(&insertedID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return gen.Reception{}, pvz_errors.ErrPVZNotFound
+			return oapi.Reception{}, pvz_errors.ErrPVZNotFound
 		}
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			switch pgErr.Code {
 			case "23503":
-				return gen.Reception{}, pvz_errors.ErrPVZNotFound
+				return oapi.Reception{}, pvz_errors.ErrPVZNotFound
 			case "23505":
 				if pgErr.ConstraintName == "idx_unique_open_reception" {
-					return gen.Reception{}, pvz_errors.ErrOpenReceptionExists
+					return oapi.Reception{}, pvz_errors.ErrOpenReceptionExists
 				}
 			}
 		}
-		return gen.Reception{}, err
+		return oapi.Reception{}, err
 	}
 
 	if err = tx.Commit(ctx); err != nil {
-		return gen.Reception{}, err
+		return oapi.Reception{}, err
 	}
 
-	return gen.Reception{
+	return oapi.Reception{
 		Id:       &insertedID,
 		DateTime: now,
 		PvzId:    req.PvzId,
-		Status:   gen.ReceptionStatus("in_progress"),
+		Status:   oapi.ReceptionStatus("in_progress"),
 	}, nil
 }
 
-func (r *receptionRepository) CloseLastReception(ctx context.Context, pvzID uuid.UUID) (gen.Reception, error) {
+func (r *receptionRepository) CloseLastReception(ctx context.Context, pvzID uuid.UUID) (oapi.Reception, error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
-		return gen.Reception{}, err
+		return oapi.Reception{}, err
 	}
 
 	defer func() {
@@ -100,20 +100,20 @@ func (r *receptionRepository) CloseLastReception(ctx context.Context, pvzID uuid
 		Scan(&receptionID, &openTime)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return gen.Reception{}, pvz_errors.ErrCloseReceptionFailed
+			return oapi.Reception{}, pvz_errors.ErrCloseReceptionFailed
 		}
-		return gen.Reception{}, err
+		return oapi.Reception{}, err
 	}
 
 	if err = tx.Commit(ctx); err != nil {
-		return gen.Reception{}, err
+		return oapi.Reception{}, err
 	}
 
-	return gen.Reception{
+	return oapi.Reception{
 		Id:       &receptionID,
 		PvzId:    pvzID,
 		DateTime: openTime,
-		Status:   gen.ReceptionStatus("close"),
+		Status:   oapi.ReceptionStatus("close"),
 	}, nil
 }
 
@@ -147,7 +147,7 @@ func (r *receptionRepository) GetReceptionsByPVZ(ctx context.Context, pvzID uuid
 			PvzId:         pvzId,
 			DateTime:      openTime,
 			CloseDateTime: closeTime,
-			Status:        gen.ReceptionStatus(status),
+			Status:        oapi.ReceptionStatus(status),
 		})
 	}
 	if err = rows.Err(); err != nil {

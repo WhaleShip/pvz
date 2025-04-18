@@ -3,7 +3,7 @@ package handlers
 import (
 	"github.com/gofiber/fiber/v2"
 	pvz_errors "github.com/whaleship/pvz/internal/errors"
-	"github.com/whaleship/pvz/internal/gen"
+	"github.com/whaleship/pvz/internal/gen/oapi"
 	"github.com/whaleship/pvz/internal/service"
 )
 
@@ -16,7 +16,7 @@ func NewPVZHandler(pvzSvc service.PVZService) *PVZHandler {
 }
 
 func (h *PVZHandler) PostPvz(c *fiber.Ctx) error {
-	var req gen.PostPvzJSONRequestBody
+	var req oapi.PostPvzJSONRequestBody
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
@@ -31,7 +31,7 @@ func (h *PVZHandler) PostPvz(c *fiber.Ctx) error {
 }
 
 func (h *PVZHandler) GetPvz(c *fiber.Ctx) error {
-	var params gen.GetPvzParams
+	var params oapi.GetPvzParams
 	if err := c.QueryParser(&params); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}

@@ -9,39 +9,49 @@ ENV_VARS = \
 	SSL_MODE=disable \
 	JWTSECRET=dontHackMePls \
 
+PROTO_DIR=proto/v1/
+OUT_DIR=internal/gen/proto
+
 env:
-	@$(eval SHELL:=/bin/bash)
-	@printf "%s\n" $(ENV_VARS) > $(ENV_FILE)
-	@echo "$(ENV_FILE) file created"
+	$(eval SHELL:=/bin/bash)
+	printf "%s\n" $(ENV_VARS) > $(ENV_FILE)
+	echo "$(ENV_FILE) file created"
 
 run:
-	@docker compose up --build
+	docker compose up --build
 
 runl:
-	@go run cmd/pvz/main.go
+	go run cmd/pvz/main.go
 
 off:
-	@docker compose down
+	docker compose down
 
 build:
-	@docker compose build
+	docker compose build
 
 logs:
-	@docker compose logs
+	docker compose logs
 
 lint:
-	@golangci-lint run
+	golangci-lint run
 
 cover:
-	@go test -coverprofile=coverage.out ./... && go tool cover -func=coverage.out
+	go test -coverprofile=coverage.out ./... && go tool cover -func=coverage.out
 
 cover-html:
-	@go test -coverprofile=coverage.out ./... && go tool cover -html=coverage.out -o coverage.html
+	go test -coverprofile=coverage.out ./... && go tool cover -html=coverage.out -o coverage.html
 
 test:
-	@go test -v ./...
+	go test -v ./...
 
 gen:
 	go generate ./...
-	go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen -o internal/gen/dto.go -generate types -package gen api/v1/swagger.yaml
-	go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen -o internal/gen/server.go -generate fiber-server -package gen api/v1/swagger.yaml
+	go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen -o internal/gen/oapi/dto.go -generate types -package oapi api/v1/swagger.yaml
+	go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen -o internal/gen/oapi/server.go -generate fiber-server -package oapi api/v1/swagger.yaml
+
+gen-proto:
+	protoc \
+      --proto_path=$(PROTO_DIR) \
+      --go_out=$(OUT_DIR) --go_opt=paths=source_relative \
+      --go-grpc_out=$(OUT_DIR) --go-grpc_opt=paths=source_relative \
+      $(PROTO_DIR)/pvz.proto

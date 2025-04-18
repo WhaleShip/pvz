@@ -3,7 +3,7 @@ package handlers
 import (
 	"github.com/gofiber/fiber/v2"
 	pvz_errors "github.com/whaleship/pvz/internal/errors"
-	"github.com/whaleship/pvz/internal/gen"
+	"github.com/whaleship/pvz/internal/gen/oapi"
 	"github.com/whaleship/pvz/internal/service"
 )
 
@@ -16,7 +16,7 @@ func NewAuthHandler(authSvc service.AuthService) *AuthHandler {
 }
 
 func (h *AuthHandler) PostRegister(c *fiber.Ctx) error {
-	var req gen.PostRegisterJSONRequestBody
+	var req oapi.PostRegisterJSONRequestBody
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
@@ -31,7 +31,7 @@ func (h *AuthHandler) PostRegister(c *fiber.Ctx) error {
 }
 
 func (h *AuthHandler) PostLogin(c *fiber.Ctx) error {
-	var req gen.PostLoginJSONRequestBody
+	var req oapi.PostLoginJSONRequestBody
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
@@ -45,7 +45,7 @@ func (h *AuthHandler) PostLogin(c *fiber.Ctx) error {
 }
 
 func (h *AuthHandler) PostDummyLogin(c *fiber.Ctx) error {
-	var req gen.PostDummyLoginJSONRequestBody
+	var req oapi.PostDummyLoginJSONRequestBody
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}

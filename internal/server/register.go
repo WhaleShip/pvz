@@ -2,12 +2,12 @@ package server
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/whaleship/pvz/internal/gen"
+	"github.com/whaleship/pvz/internal/gen/oapi"
 	"github.com/whaleship/pvz/internal/middleware"
 )
 
 func (srv *Server) RegisterAllHandlers(app *fiber.App) {
-	wrapper := gen.ServerInterfaceWrapper{
+	wrapper := oapi.ServerInterfaceWrapper{
 		Handler: srv,
 	}
 
@@ -17,7 +17,7 @@ func (srv *Server) RegisterAllHandlers(app *fiber.App) {
 	srv.registerPvzHandlers(app, wrapper)
 }
 
-func (srv *Server) registerAuthHandlers(app *fiber.App, wrapper gen.ServerInterfaceWrapper) {
+func (srv *Server) registerAuthHandlers(app *fiber.App, wrapper oapi.ServerInterfaceWrapper) {
 	app.Post(
 		"/dummyLogin",
 		middleware.MetricsMiddleware("PostDummyLogin", srv.Metrics),
@@ -37,7 +37,7 @@ func (srv *Server) registerAuthHandlers(app *fiber.App, wrapper gen.ServerInterf
 	)
 }
 
-func (srv *Server) registerPvzHandlers(app *fiber.App, wrapper gen.ServerInterfaceWrapper) {
+func (srv *Server) registerPvzHandlers(app *fiber.App, wrapper oapi.ServerInterfaceWrapper) {
 	app.Post(
 		"/pvz",
 		middleware.AuthMiddleware,
@@ -55,7 +55,7 @@ func (srv *Server) registerPvzHandlers(app *fiber.App, wrapper gen.ServerInterfa
 	)
 }
 
-func (srv *Server) registerProductsHandlers(app *fiber.App, wrapper gen.ServerInterfaceWrapper) {
+func (srv *Server) registerProductsHandlers(app *fiber.App, wrapper oapi.ServerInterfaceWrapper) {
 	app.Post(
 		"/products",
 		middleware.AuthMiddleware,
@@ -73,7 +73,7 @@ func (srv *Server) registerProductsHandlers(app *fiber.App, wrapper gen.ServerIn
 	)
 }
 
-func (srv *Server) registerReceptionsHandlers(app *fiber.App, wrapper gen.ServerInterfaceWrapper) {
+func (srv *Server) registerReceptionsHandlers(app *fiber.App, wrapper oapi.ServerInterfaceWrapper) {
 	app.Post(
 		"/receptions",
 		middleware.AuthMiddleware,

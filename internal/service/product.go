@@ -5,14 +5,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/whaleship/pvz/internal/gen"
+	"github.com/whaleship/pvz/internal/gen/oapi"
 	"github.com/whaleship/pvz/internal/infrastructure"
 	"github.com/whaleship/pvz/internal/metrics"
 	"github.com/whaleship/pvz/internal/repository"
 )
 
 type ProductService interface {
-	AddProduct(ctx context.Context, req gen.PostProductsJSONRequestBody) (gen.Product, error)
+	AddProduct(ctx context.Context, req oapi.PostProductsJSONRequestBody) (oapi.Product, error)
 	DeleteLastProduct(ctx context.Context, pvzID uuid.UUID) error
 }
 
@@ -28,18 +28,18 @@ func NewProductService(repo repository.ProductRepository, aggregator *infrastruc
 	}
 }
 
-func (s *productService) AddProduct(ctx context.Context, req gen.PostProductsJSONRequestBody) (gen.Product, error) {
+func (s *productService) AddProduct(ctx context.Context, req oapi.PostProductsJSONRequestBody) (oapi.Product, error) {
 	newProductID := uuid.New()
 	now := time.Now()
 	receptionID, err := s.productRepo.InsertProduct(ctx, req.PvzId, newProductID, now, string(req.Type))
 	if err != nil {
-		return gen.Product{}, err
+		return oapi.Product{}, err
 	}
-	product := gen.Product{
+	product := oapi.Product{
 		Id:          &newProductID,
 		DateTime:    &now,
 		ReceptionId: receptionID,
-		Type:        gen.ProductType(req.Type),
+		Type:        oapi.ProductType(req.Type),
 	}
 
 	s.metrics.ReportMetrics(metrics.MetricsUpdate{

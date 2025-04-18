@@ -4,7 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
-	"github.com/whaleship/pvz/internal/gen"
+	"github.com/whaleship/pvz/internal/gen/oapi"
 	"github.com/whaleship/pvz/internal/handlers"
 	"github.com/whaleship/pvz/internal/infrastructure"
 	"github.com/whaleship/pvz/internal/repository"
@@ -35,7 +35,7 @@ func (srv *Server) PostPvz(c *fiber.Ctx) error {
 	return srv.PVZHandler.PostPvz(c)
 }
 
-func (srv *Server) GetPvz(c *fiber.Ctx, params gen.GetPvzParams) error {
+func (srv *Server) GetPvz(c *fiber.Ctx, params oapi.GetPvzParams) error {
 	return srv.PVZHandler.GetPvz(c)
 }
 

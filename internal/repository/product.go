@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	pvz_errors "github.com/whaleship/pvz/internal/errors"
-	"github.com/whaleship/pvz/internal/gen"
+	"github.com/whaleship/pvz/internal/gen/oapi"
 )
 
 type ProductRepository interface {
@@ -19,7 +19,7 @@ type ProductRepository interface {
 		dateTime time.Time,
 		productType string) (uuid.UUID, error)
 	DeleteLastProduct(ctx context.Context, pvzID uuid.UUID) error
-	GetProductsByReceptionIDs(ctx context.Context, receptionIDs []*uuid.UUID) ([]gen.Product, error)
+	GetProductsByReceptionIDs(ctx context.Context, receptionIDs []*uuid.UUID) ([]oapi.Product, error)
 }
 
 type productRepository struct {
@@ -92,7 +92,7 @@ func (r *productRepository) DeleteLastProduct(ctx context.Context, pvzID uuid.UU
 }
 
 func (r *productRepository) GetProductsByReceptionIDs(ctx context.Context,
-	receptionIDs []*uuid.UUID) ([]gen.Product, error) {
+	receptionIDs []*uuid.UUID) ([]oapi.Product, error) {
 	rows, err := r.db.Query(ctx, QueryGetProductsByReceptions, receptionIDs)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -102,7 +102,7 @@ func (r *productRepository) GetProductsByReceptionIDs(ctx context.Context,
 	}
 	defer rows.Close()
 
-	var products []gen.Product
+	var products []oapi.Product
 	for rows.Next() {
 		var id uuid.UUID
 		var receptionId uuid.UUID
@@ -114,11 +114,11 @@ func (r *productRepository) GetProductsByReceptionIDs(ctx context.Context,
 			}
 			return nil, err
 		}
-		products = append(products, gen.Product{
+		products = append(products, oapi.Product{
 			Id:          &id,
 			ReceptionId: receptionId,
 			DateTime:    &dt,
-			Type:        gen.ProductType(typ),
+			Type:        oapi.ProductType(typ),
 		})
 	}
 	if err = rows.Err(); err != nil {

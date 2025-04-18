@@ -5,15 +5,15 @@ import (
 
 	"github.com/google/uuid"
 	pvz_errors "github.com/whaleship/pvz/internal/errors"
-	"github.com/whaleship/pvz/internal/gen"
+	"github.com/whaleship/pvz/internal/gen/oapi"
 	"github.com/whaleship/pvz/internal/repository"
 	"github.com/whaleship/pvz/internal/utils"
 )
 
 type AuthService interface {
-	RegisterUser(ctx context.Context, req gen.PostRegisterJSONRequestBody) (gen.User, error)
-	LoginUser(ctx context.Context, req gen.PostLoginJSONRequestBody) (string, error)
-	DummyLogin(req gen.PostDummyLoginJSONRequestBody) (string, error)
+	RegisterUser(ctx context.Context, req oapi.PostRegisterJSONRequestBody) (oapi.User, error)
+	LoginUser(ctx context.Context, req oapi.PostLoginJSONRequestBody) (string, error)
+	DummyLogin(req oapi.PostDummyLoginJSONRequestBody) (string, error)
 }
 
 type authService struct {
@@ -24,26 +24,26 @@ func NewAuthService(userRepo repository.UserRepository) AuthService {
 	return &authService{userRepo: userRepo}
 }
 
-func (s *authService) RegisterUser(ctx context.Context, req gen.PostRegisterJSONRequestBody) (gen.User, error) {
-	if req.Role != gen.Employee && req.Role != gen.Moderator {
-		return gen.User{}, pvz_errors.ErrInvalidRole
+func (s *authService) RegisterUser(ctx context.Context, req oapi.PostRegisterJSONRequestBody) (oapi.User, error) {
+	if req.Role != oapi.Employee && req.Role != oapi.Moderator {
+		return oapi.User{}, pvz_errors.ErrInvalidRole
 	}
 	hashedPass, err := utils.HashPassword(req.Password)
 	if err != nil {
-		return gen.User{}, err
+		return oapi.User{}, err
 	}
 	newUserID := uuid.New()
 	if err := s.userRepo.InsertUser(ctx, newUserID, string(req.Email), hashedPass, string(req.Role)); err != nil {
-		return gen.User{}, err
+		return oapi.User{}, err
 	}
-	return gen.User{
+	return oapi.User{
 		Id:    &newUserID,
 		Email: req.Email,
-		Role:  gen.UserRole(req.Role),
+		Role:  oapi.UserRole(req.Role),
 	}, nil
 }
 
-func (s *authService) LoginUser(ctx context.Context, req gen.PostLoginJSONRequestBody) (string, error) {
+func (s *authService) LoginUser(ctx context.Context, req oapi.PostLoginJSONRequestBody) (string, error) {
 	id, hashed, role, err := s.userRepo.GetUserByEmail(ctx, string(req.Email))
 	if err != nil {
 		return "", err
@@ -58,9 +58,9 @@ func (s *authService) LoginUser(ctx context.Context, req gen.PostLoginJSONReques
 	return token, nil
 }
 
-func (s *authService) DummyLogin(req gen.PostDummyLoginJSONRequestBody) (string, error) {
+func (s *authService) DummyLogin(req oapi.PostDummyLoginJSONRequestBody) (string, error) {
 	role := req.Role
-	if role != gen.PostDummyLoginJSONBodyRoleModerator && role != gen.PostDummyLoginJSONBodyRoleEmployee {
+	if role != oapi.PostDummyLoginJSONBodyRoleModerator && role != oapi.PostDummyLoginJSONBodyRoleEmployee {
 		return "", pvz_errors.ErrInvalidRole
 	}
 

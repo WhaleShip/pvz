@@ -10,16 +10,16 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	pvz_errors "github.com/whaleship/pvz/internal/errors"
-	"github.com/whaleship/pvz/internal/gen"
+	"github.com/whaleship/pvz/internal/gen/oapi"
 )
 
 type PVZRepository interface {
-	InsertPVZ(ctx context.Context, city gen.PVZCity, registrationDate time.Time) (gen.PVZ, error)
+	InsertPVZ(ctx context.Context, city oapi.PVZCity, registrationDate time.Time) (oapi.PVZ, error)
 	SelectPVZByOpenReceptions(
 		ctx context.Context,
 		startDate, endDate time.Time,
 		limit, offset int,
-	) ([]gen.PVZ, error)
+	) ([]oapi.PVZ, error)
 }
 type pvzRepository struct {
 	db *pgxpool.Pool
@@ -29,7 +29,7 @@ func NewPVZRepository(dbConn *pgxpool.Pool) PVZRepository {
 	return &pvzRepository{db: dbConn}
 }
 
-func (r *pvzRepository) InsertPVZ(ctx context.Context, city gen.PVZCity, registrationDate time.Time) (gen.PVZ, error) {
+func (r *pvzRepository) InsertPVZ(ctx context.Context, city oapi.PVZCity, registrationDate time.Time) (oapi.PVZ, error) {
 	newPvzID := uuid.New()
 	var id uuid.UUID
 	var outCity string
@@ -39,14 +39,14 @@ func (r *pvzRepository) InsertPVZ(ctx context.Context, city gen.PVZCity, registr
 		Scan(&id, &outCity, &regDate)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return gen.PVZ{}, pvz_errors.ErrInsertPVZFailed
+			return oapi.PVZ{}, pvz_errors.ErrInsertPVZFailed
 		}
-		return gen.PVZ{}, err
+		return oapi.PVZ{}, err
 	}
 
-	return gen.PVZ{
+	return oapi.PVZ{
 		Id:               &id,
-		City:             gen.PVZCity(outCity),
+		City:             oapi.PVZCity(outCity),
 		RegistrationDate: &regDate,
 	}, nil
 }
@@ -55,7 +55,7 @@ func (r *pvzRepository) SelectPVZByOpenReceptions(
 	ctx context.Context,
 	startDate, endDate time.Time,
 	limit, offset int,
-) ([]gen.PVZ, error) {
+) ([]oapi.PVZ, error) {
 	rows, err := r.db.Query(ctx,
 		QuerySelectPvzByOpenReceptions,
 		startDate, endDate,
@@ -66,7 +66,7 @@ func (r *pvzRepository) SelectPVZByOpenReceptions(
 	}
 	defer rows.Close()
 
-	var list []gen.PVZ
+	var list []oapi.PVZ
 	for rows.Next() {
 		var id uuid.UUID
 		var city string
@@ -74,9 +74,9 @@ func (r *pvzRepository) SelectPVZByOpenReceptions(
 		if err := rows.Scan(&id, &city, &regDate); err != nil {
 			return nil, err
 		}
-		list = append(list, gen.PVZ{
+		list = append(list, oapi.PVZ{
 			Id:               &id,
-			City:             gen.PVZCity(city),
+			City:             oapi.PVZCity(city),
 			RegistrationDate: &regDate,
 		})
 	}

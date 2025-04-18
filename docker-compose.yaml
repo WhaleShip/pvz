@@ -41,3 +41,12 @@ services:
       - ./.env
     depends_on:
       - db
+
+  prometheus:
+    container_name: avito-prometheus
+    image: prom/prometheus:latest
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml

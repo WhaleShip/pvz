@@ -11,6 +11,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	pvz_errors "github.com/whaleship/pvz/internal/errors"
 	"github.com/whaleship/pvz/internal/gen/oapi"
+	"github.com/whaleship/pvz/internal/gen/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type PVZRepository interface {
@@ -20,6 +22,7 @@ type PVZRepository interface {
 		startDate, endDate time.Time,
 		limit, offset int,
 	) ([]oapi.PVZ, error)
+	SelectAllPVZs(ctx context.Context) ([]*proto.PVZ, error)
 }
 type pvzRepository struct {
 	db *pgxpool.Pool
@@ -57,7 +60,7 @@ func (r *pvzRepository) SelectPVZByOpenReceptions(
 	limit, offset int,
 ) ([]oapi.PVZ, error) {
 	rows, err := r.db.Query(ctx,
-		QuerySelectPvzByOpenReceptions,
+		QuerySelectPVZByOpenReceptions,
 		startDate, endDate,
 		limit, offset,
 	)
@@ -81,4 +84,33 @@ func (r *pvzRepository) SelectPVZByOpenReceptions(
 		})
 	}
 	return list, rows.Err()
+}
+
+func (r *pvzRepository) SelectAllPVZs(ctx context.Context) ([]*proto.PVZ, error) {
+	rows, err := r.db.Query(ctx, QuerySelectAllPVZs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []*proto.PVZ
+	for rows.Next() {
+		var (
+			id   string
+			city string
+			t    time.Time
+		)
+		if err := rows.Scan(&id, &city, &t); err != nil {
+			return nil, err
+		}
+		out = append(out, &proto.PVZ{
+			Id:               id,
+			City:             city,
+			RegistrationDate: timestamppb.New(t),
+		})
+	}
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+	return out, nil
 }

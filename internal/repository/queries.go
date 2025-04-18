@@ -15,12 +15,7 @@ const (
 							VALUES ($1, $2, $3)
 							RETURNING id, city, registration_date;`
 
-	QueryGetProductsByReceptions = `SELECT id, reception_id, date_time, type
-									FROM products
-									WHERE reception_id = ANY($1)
-									ORDER BY date_time DESC`
-
-	QuerySelectPvzByOpenReceptions = `WITH qualified_pvzs AS (
+	QuerySelectPVZByOpenReceptions = `WITH qualified_pvzs AS (
 										SELECT DISTINCT pvz_id
 										FROM receptions
 										WHERE date_time <= $2
@@ -32,6 +27,7 @@ const (
 									ORDER BY registration_date DESC
 									LIMIT $3 OFFSET $4;
 									`
+	QuerySelectAllPVZs = `SELECT id, city, registration_date FROM pvz`
 
 	// recepiton
 	QueryInsertReception = `WITH locked AS (
@@ -90,4 +86,9 @@ const (
 							DELETE FROM products
 							WHERE id = (SELECT id FROM last)
 							RETURNING *;`
+
+	QueryGetProductsByReceptions = `SELECT id, reception_id, date_time, type
+							FROM products
+							WHERE reception_id = ANY($1)
+							ORDER BY date_time DESC`
 )

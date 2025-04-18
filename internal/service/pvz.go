@@ -9,6 +9,7 @@ import (
 	"github.com/whaleship/pvz/internal/dto"
 	pvz_errors "github.com/whaleship/pvz/internal/errors"
 	"github.com/whaleship/pvz/internal/gen/oapi"
+	"github.com/whaleship/pvz/internal/gen/proto"
 	"github.com/whaleship/pvz/internal/infrastructure"
 	"github.com/whaleship/pvz/internal/metrics"
 	"github.com/whaleship/pvz/internal/repository"
@@ -17,6 +18,7 @@ import (
 type PVZService interface {
 	CreatePVZ(ctx context.Context, req oapi.PostPvzJSONRequestBody) (oapi.PVZ, error)
 	GetPVZ(ctx context.Context, params oapi.GetPvzParams) ([]dto.PVZWithReceptions, error)
+	GetAllPVZs(ctx context.Context) ([]*proto.PVZ, error)
 }
 
 type pvzService struct {
@@ -144,4 +146,12 @@ func (s *pvzService) GetPVZ(ctx context.Context, params oapi.GetPvzParams) ([]dt
 	}
 
 	return aggregated, nil
+}
+
+func (s *pvzService) GetAllPVZs(ctx context.Context) ([]*proto.PVZ, error) {
+	pvzs, err := s.pvzRepo.SelectAllPVZs(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return pvzs, nil
 }

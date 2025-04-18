@@ -3,10 +3,20 @@ package server
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/whaleship/pvz/internal/gen/oapi"
+	"github.com/whaleship/pvz/internal/gen/proto"
+	grpc_handlers "github.com/whaleship/pvz/internal/handlers/grpc"
 	"github.com/whaleship/pvz/internal/middleware"
+	"google.golang.org/grpc"
 )
 
-func (srv *Server) RegisterAllHandlers(app *fiber.App) {
+func (srv *Server) RegisterGRPCHandlers() *grpc.Server {
+	grpcServer := grpc.NewServer()
+	pvzGRPCSvc := grpc_handlers.NewPVZGRPCService(srv.pvzService)
+	proto.RegisterPVZServiceServer(grpcServer, pvzGRPCSvc)
+	return grpcServer
+}
+
+func (srv *Server) RegisterHttpHandlers(app *fiber.App) {
 	wrapper := oapi.ServerInterfaceWrapper{
 		Handler: srv,
 	}

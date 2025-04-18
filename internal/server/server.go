@@ -5,18 +5,19 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/whaleship/pvz/internal/gen/oapi"
-	"github.com/whaleship/pvz/internal/handlers"
+	http_handlers "github.com/whaleship/pvz/internal/handlers/http"
 	"github.com/whaleship/pvz/internal/infrastructure"
 	"github.com/whaleship/pvz/internal/repository"
 	"github.com/whaleship/pvz/internal/service"
 )
 
 type Server struct {
-	AuthHandler      *handlers.AuthHandler
-	PVZHandler       *handlers.PVZHandler
-	ProductHandler   *handlers.ProductHandler
-	ReceptionHandler *handlers.ReceptionHandler
+	AuthHandler      *http_handlers.AuthHandler
+	PVZHandler       *http_handlers.PVZHandler
+	ProductHandler   *http_handlers.ProductHandler
+	ReceptionHandler *http_handlers.ReceptionHandler
 	Metrics          *infrastructure.IPCManager
+	pvzService       service.PVZService
 }
 
 func (srv *Server) PostDummyLogin(c *fiber.Ctx) error {
@@ -66,10 +67,10 @@ func NewServer(conn *pgxpool.Pool, ipcManager *infrastructure.IPCManager) *Serve
 	productSvc := service.NewProductService(productRepo, ipcManager)
 	receptionSvc := service.NewReceptionService(receptionRepo, ipcManager)
 
-	authHandler := handlers.NewAuthHandler(authSvc)
-	pvzHandler := handlers.NewPVZHandler(pvzSvc)
-	productHandler := handlers.NewProductHandler(productSvc)
-	receptionHandler := handlers.NewReceptionHandler(receptionSvc)
+	authHandler := http_handlers.NewAuthHandler(authSvc)
+	pvzHandler := http_handlers.NewPVZHandler(pvzSvc)
+	productHandler := http_handlers.NewProductHandler(productSvc)
+	receptionHandler := http_handlers.NewReceptionHandler(receptionSvc)
 
 	return &Server{
 		AuthHandler:      authHandler,
@@ -77,5 +78,6 @@ func NewServer(conn *pgxpool.Pool, ipcManager *infrastructure.IPCManager) *Serve
 		ProductHandler:   productHandler,
 		ReceptionHandler: receptionHandler,
 		Metrics:          ipcManager,
+		pvzService:       pvzSvc,
 	}
 }

@@ -12,5 +12,7 @@ RUN apk add --no-cache dumb-init
 WORKDIR /pvz
 COPY --from=builder /pvz/pvz-app .
 EXPOSE 8080
+EXPOSE 3000
+EXPOSE 9000
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["./pvz-app"]

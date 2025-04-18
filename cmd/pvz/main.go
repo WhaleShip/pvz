@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -10,20 +11,23 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/whaleship/pvz/internal/config"
 	"github.com/whaleship/pvz/internal/database"
 	"github.com/whaleship/pvz/internal/infrastructure"
 	"github.com/whaleship/pvz/internal/metrics"
 	"github.com/whaleship/pvz/internal/server"
+	"google.golang.org/grpc"
 )
 
 func main() {
 	isPrefork := true
 	app := fiber.New(fiber.Config{Prefork: isPrefork})
 	app.Use(logger.New())
-	var dbConn *pgxpool.Pool
-	var err error
+	dbConn, err := database.GetInitializedDB()
+	if err != nil {
+		log.Fatalf("db connection error: %v", err)
+	}
+	defer dbConn.Close()
 
 	techBuffer := 200
 	businessBuffer := 400
@@ -36,15 +40,13 @@ func main() {
 	ipcManager := infrastructure.NewIPCManager(config.IpcSockPath, techBuffer, businessBuffer, aggregator)
 
 	if fiber.IsChild() || !isPrefork {
-		dbConn, err = database.GetInitializedDB()
-		if err != nil {
-			log.Fatalf("db connection error: %v", err)
-		}
-		defer dbConn.Close()
 
 		ipcManager.StartSender()
 	}
 
+	srv := server.NewServer(dbConn, ipcManager)
+	srv.RegisterHttpHandlers(app)
+	var grpcServer *grpc.Server
 	if !fiber.IsChild() {
 		ipcManager.StartServer()
 		go func() {
@@ -59,10 +61,18 @@ func main() {
 				log.Fatalf("metrics server error: %v", err)
 			}
 		}()
+		grpcServer := srv.RegisterGRPCHandlers()
+		lis, err := net.Listen("tcp", ":3000")
+		if err != nil {
+			log.Fatalf("failed to listen on port 3000: %v", err)
+		}
+		go func() {
+			log.Println("gRPC server starting on :3000")
+			if err := grpcServer.Serve(lis); err != nil {
+				log.Printf("gRPC server error: %v", err)
+			}
+		}()
 	}
-
-	srv := server.NewServer(dbConn, ipcManager)
-	srv.RegisterAllHandlers(app)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
@@ -75,6 +85,7 @@ func main() {
 
 	<-quit
 
+	grpcServer.GracefulStop()
 	if err := app.Shutdown(); err != nil {
 		log.Printf("fiber shutdown error: %v", err)
 	}

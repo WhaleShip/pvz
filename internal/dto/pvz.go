@@ -8,13 +8,13 @@ import (
 )
 
 type ReceptionWithProducts struct {
-	Reception Reception
-	Products  []oapi.Product
+	Reception Reception      `json:"receptions"`
+	Products  []oapi.Product `json:"products"`
 }
 
 type PVZWithReceptions struct {
-	Pvz        oapi.PVZ
-	Receptions []ReceptionWithProducts
+	Pvz        oapi.PVZ                `json:"pvz"`
+	Receptions []ReceptionWithProducts `json:"receptions"`
 }
 
 type Reception struct {

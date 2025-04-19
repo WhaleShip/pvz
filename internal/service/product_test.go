@@ -103,6 +103,36 @@ func TestAddProduct(t *testing.T) {
 		mockRepo.AssertExpectations(t)
 		mockMetrics.AssertExpectations(t)
 	})
+	t.Run("metrics nil", func(t *testing.T) {
+		mockRepo := new(mockProductRepo)
+		svc := NewProductService(mockRepo, nil)
+
+		pvzID := uuid.New()
+		req := oapi.PostProductsJSONRequestBody{PvzId: pvzID, Type: "T"}
+		expectedReceptionID := uuid.New()
+
+		var capturedProductID uuid.UUID
+
+		mockRepo.
+			On("InsertProduct",
+				mock.Anything,
+				pvzID,
+				mock.MatchedBy(func(id uuid.UUID) bool {
+					capturedProductID = id
+					return true
+				}),
+				mock.MatchedBy(func(tm time.Time) bool {
+					return true
+				}),
+				string(req.Type),
+			).
+			Return(expectedReceptionID, nil)
+
+		prod, err := svc.AddProduct(context.Background(), req)
+		require.NoError(t, err)
+		require.Equal(t, &capturedProductID, prod.Id)
+		require.Equal(t, expectedReceptionID, prod.ReceptionId)
+	})
 }
 
 func TestDeleteLastProduct(t *testing.T) {

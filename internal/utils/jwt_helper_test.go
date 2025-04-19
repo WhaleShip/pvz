@@ -51,4 +51,20 @@ func TestParseJWTToken(t *testing.T) {
 		_, _, err = ParseJWTToken(signed)
 		require.Error(t, err)
 	})
+	t.Run("invalid userID", func(t *testing.T) {
+		claims := jwt.MapClaims{
+			"user_id": "not-a-uuid",
+			"role":    "some-role",
+			"exp":     time.Now().Add(time.Hour).Unix(),
+			"iat":     time.Now().Unix(),
+		}
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+		signed, err := token.SignedString(config.GetJWTSecret())
+		require.NoError(t, err)
+
+		uid, role, err := ParseJWTToken(signed)
+		require.Error(t, err)
+		require.Equal(t, uuid.Nil, uid)
+		require.Empty(t, role)
+	})
 }

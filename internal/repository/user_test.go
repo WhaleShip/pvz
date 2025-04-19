@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/pashagolub/pgxmock/v4"
 	"github.com/stretchr/testify/require"
 
@@ -47,6 +48,16 @@ func TestInsertUser(t *testing.T) {
 		mockPool.
 			ExpectExec(QueryInsertUser).
 			WillReturnError(errors.New("boom"))
+
+		err := repo.InsertUser(ctx, id, email, pass, role)
+		require.Error(t, err)
+	})
+	t.Run("exec pg error", func(t *testing.T) {
+		pgErr := &pgconn.PgError{Code: "23505"}
+		mockPool.
+			ExpectExec(QueryInsertUser).
+			WithArgs(id, email, pass, role).
+			WillReturnError(pgErr)
 
 		err := repo.InsertUser(ctx, id, email, pass, role)
 		require.Error(t, err)
@@ -95,6 +106,15 @@ func TestGetUserByEmail(t *testing.T) {
 			ExpectQuery(QueryUserByEmail).
 			WithArgs(email).
 			WillReturnError(errors.New("db"))
+
+		_, _, _, err := repo.GetUserByEmail(ctx, email)
+		require.Error(t, err)
+	})
+	t.Run("scan error", func(t *testing.T) {
+		mockPool.
+			ExpectQuery(QueryUserByEmail).
+			WithArgs(email).
+			WillReturnRows(pgxmock.NewRows([]string{"id", "password", "role"}).AddRow("not-uuid", pass, role))
 
 		_, _, _, err := repo.GetUserByEmail(ctx, email)
 		require.Error(t, err)

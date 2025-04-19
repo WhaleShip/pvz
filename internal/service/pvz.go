@@ -65,9 +65,11 @@ func (s *pvzService) CreatePVZ(ctx context.Context, req oapi.PostPvzJSONRequestB
 		return oapi.PVZ{}, fmt.Errorf("%w: %s", pvz_errors.ErrInsertPVZFailed, err.Error())
 	}
 
-	s.metrics.SendBusinessMetricsUpdate(metrics.MetricsUpdate{
-		PvzCreatedDelta: 1,
-	})
+	if s.metrics != nil {
+		s.metrics.SendBusinessMetricsUpdate(metrics.MetricsUpdate{
+			PvzCreatedDelta: 1,
+		})
+	}
 
 	return pvz, nil
 }

@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"errors"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -36,10 +35,7 @@ func ParseJWTToken(tokenStr string) (uuid.UUID, string, error) {
 	if err != nil {
 		return uuid.Nil, "", err
 	}
-	claims, ok := token.Claims.(*claims)
-	if !ok || !token.Valid {
-		return uuid.Nil, "", errors.New("invalid token")
-	}
+	claims, _ := token.Claims.(*claims)
 	uid, err := uuid.Parse(claims.UserID)
 	if err != nil {
 		return uuid.Nil, "", err

@@ -57,6 +57,22 @@ func TestCreateReception(t *testing.T) {
 		mockRepo.AssertExpectations(t)
 		mockMetrics.AssertExpectations(t)
 	})
+	t.Run("metrics nil", func(t *testing.T) {
+		mockRepo := new(mockReceptionWriter)
+		svc := NewReceptionService(mockRepo, nil)
+
+		req := oapi.PostReceptionsJSONRequestBody{PvzId: uuid.New()}
+		expected := oapi.Reception{Id: uuidPtr(uuid.New())}
+
+		mockRepo.
+			On("CreateReception", mock.Anything, req).
+			Return(expected, nil)
+
+		out, err := svc.CreateReception(req)
+		require.NoError(t, err)
+		require.Equal(t, expected, out)
+		mockRepo.AssertExpectations(t)
+	})
 }
 
 func TestCloseLastReception(t *testing.T) {

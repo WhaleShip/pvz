@@ -30,10 +30,11 @@ func (s *receptionService) CreateReception(req oapi.PostReceptionsJSONRequestBod
 	if err != nil {
 		return oapi.Reception{}, err
 	}
-
-	s.metrics.SendBusinessMetricsUpdate(metrics.MetricsUpdate{
-		ReceptionsCreatedDelta: 1,
-	})
+	if s.metrics != nil {
+		s.metrics.SendBusinessMetricsUpdate(metrics.MetricsUpdate{
+			ReceptionsCreatedDelta: 1,
+		})
+	}
 
 	return reception, nil
 }

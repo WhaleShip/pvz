@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	"bufio"
+	"encoding/json"
 	"net"
 	"os"
 	"path/filepath"
@@ -69,9 +70,20 @@ func TestSendTechMetricsUpdate(t *testing.T) {
 	})
 }
 
-func TestSendBusinessMetricsFallback(t *testing.T) {
-	t.Run("falls back to ReportMetrics when buffer full", func(t *testing.T) {
-		sock := filepath.Join(os.TempDir(), "ipc_fb.sock")
+func TestSendBusinessMetricsUpdateChaining(t *testing.T) {
+	t.Run("enqueues until buffer not full", func(t *testing.T) {
+		m := NewIPCManager("", 0, 2, nil)
+		u1 := metrics.MetricsUpdate{Endpoint: "/b1"}
+		u2 := metrics.MetricsUpdate{Endpoint: "/b2"}
+
+		m.SendBusinessMetricsUpdate(u1)
+		require.Len(t, m.businessMetricsCh, 1)
+		m.SendBusinessMetricsUpdate(u2)
+		require.Len(t, m.businessMetricsCh, 2)
+	})
+
+	t.Run("fallback when buffer full", func(t *testing.T) {
+		sock := filepath.Join(os.TempDir(), "ipc_fb2.sock")
 		os.Remove(sock)
 		lnAddr, err := net.ResolveUnixAddr("unix", sock)
 		require.NoError(t, err)
@@ -79,9 +91,9 @@ func TestSendBusinessMetricsFallback(t *testing.T) {
 		require.NoError(t, err)
 		defer func() { ln.Close(); os.Remove(sock) }()
 
-		m := NewIPCManager(sock, 0, 1, &spyAggregator{})
-		m.SendBusinessMetricsUpdate(metrics.MetricsUpdate{Endpoint: "/b1"})
-
+		agg := &spyAggregator{}
+		m := NewIPCManager(sock, 0, 1, agg)
+		m.SendBusinessMetricsUpdate(metrics.MetricsUpdate{Endpoint: "/keep"})
 		ch := make(chan string, 1)
 		go func() {
 			conn, err := ln.AcceptUnix()
@@ -93,12 +105,38 @@ func TestSendBusinessMetricsFallback(t *testing.T) {
 			}
 		}()
 
-		m.SendBusinessMetricsUpdate(metrics.MetricsUpdate{Endpoint: "/b2", HTTPRequestsDelta: 2})
+		m.SendBusinessMetricsUpdate(metrics.MetricsUpdate{Endpoint: "/fallback", HTTPRequestsDelta: 3})
 		select {
 		case line := <-ch:
-			require.Contains(t, line, `"endpoint":"/b2"`)
+			require.Contains(t, line, `"endpoint":"/fallback"`)
+			require.Contains(t, line, `"http_requests_delta":3`)
 		case <-time.After(50 * time.Millisecond):
-			t.Fatal("expected fallback ReportMetrics to write to socket")
+			t.Fatal("expected fallback via ReportMetrics")
 		}
+	})
+}
+
+func TestStartServerHandleIPC(t *testing.T) {
+	t.Run("full pipeline: StartServer → handle → UpdateMetrics", func(t *testing.T) {
+		sock := filepath.Join(os.TempDir(), "ipc_handle.sock")
+		os.Remove(sock)
+		agg := &spyAggregator{}
+		m := NewIPCManager(sock, 0, 0, agg)
+		m.StartServer()
+		time.Sleep(20 * time.Millisecond)
+
+		addr := &net.UnixAddr{Name: sock, Net: "unix"}
+		conn, err := net.DialUnix("unix", nil, addr)
+		require.NoError(t, err)
+		defer conn.Close()
+
+		update := metrics.MetricsUpdate{Endpoint: "/h", HTTPRequestsDelta: 5}
+		payload, err := json.Marshal(update)
+		require.NoError(t, err)
+		_, err = conn.Write(append(payload, '\n'))
+		require.NoError(t, err)
+
+		time.Sleep(20 * time.Millisecond)
+		require.Equal(t, update, agg.received)
 	})
 }

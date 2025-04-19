@@ -67,6 +67,8 @@ linters:
     - path: "_test\\.go"
       linters:
       - funlen
+      - errcheck
+      - gocognit
 issues:
   max-same-issues: 50
 formatters:

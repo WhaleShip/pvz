@@ -43,9 +43,11 @@ func (s *productService) AddProduct(ctx context.Context, req oapi.PostProductsJS
 		Type:        oapi.ProductType(req.Type),
 	}
 
-	s.metrics.SendBusinessMetricsUpdate(metrics.MetricsUpdate{
-		ProductsAddedDelta: 1,
-	})
+	if s.metrics != nil {
+		s.metrics.SendBusinessMetricsUpdate(metrics.MetricsUpdate{
+			ProductsAddedDelta: 1,
+		})
+	}
 
 	return product, nil
 }

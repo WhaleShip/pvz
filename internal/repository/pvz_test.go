@@ -73,6 +73,30 @@ func TestInsertPVZ(t *testing.T) {
 		_, err := repo.InsertPVZ(ctx, city, reg)
 		require.Error(t, err)
 	})
+	t.Run("scan error", func(t *testing.T) {
+		rows := pgxmock.NewRows([]string{"id", "city", "registration_date"}).
+			AddRow("not-a-uuid", string(city), reg)
+		mockPool.
+			ExpectQuery(QueryInsertPVZ).
+			WithArgs(
+				pgxmock.AnyArg(),
+				string(city),
+				pgxmock.AnyArg(),
+			).
+			WillReturnRows(rows)
+
+		_, err := repo.InsertPVZ(ctx, city, reg)
+		require.Error(t, err)
+	})
+
+	t.Run("query error", func(t *testing.T) {
+		mockPool.
+			ExpectQuery(QueryInsertPVZ).
+			WillReturnError(errors.New("some failure"))
+
+		_, err := repo.InsertPVZ(ctx, city, reg)
+		require.Error(t, err)
+	})
 }
 
 func TestSelectPVZByOpenReceptions(t *testing.T) {
@@ -107,6 +131,29 @@ func TestSelectPVZByOpenReceptions(t *testing.T) {
 		_, err := repo.SelectPVZByOpenReceptions(ctx, start, end, 1, 0)
 		require.Error(t, err)
 	})
+	t.Run("scan error", func(t *testing.T) {
+		rows := pgxmock.NewRows([]string{"id", "city", "registration_date"}).
+			AddRow("bad-uuid", "X", start)
+		mockPool.
+			ExpectQuery(QuerySelectPVZByOpenReceptions).
+			WithArgs(start, end, 10, 0).
+			WillReturnRows(rows)
+
+		_, err := repo.SelectPVZByOpenReceptions(ctx, start, end, 10, 0)
+		require.Error(t, err)
+	})
+
+	t.Run("rows.Err", func(t *testing.T) {
+		rows := pgxmock.NewRows([]string{"id", "city", "registration_date"}).
+			RowError(0, errors.New("row failure"))
+		mockPool.
+			ExpectQuery(QuerySelectPVZByOpenReceptions).
+			WithArgs(start, end, 5, 1).
+			WillReturnRows(rows)
+
+		_, err := repo.SelectPVZByOpenReceptions(ctx, start, end, 5, 1)
+		require.Error(t, err)
+	})
 }
 
 func TestSelectAllPVZs(t *testing.T) {
@@ -134,6 +181,24 @@ func TestSelectAllPVZs(t *testing.T) {
 	t.Run("rows.Err", func(t *testing.T) {
 		rows := pgxmock.NewRows([]string{"id", "city", "registration_date"}).
 			RowError(0, errors.New("bad"))
+		mockPool.
+			ExpectQuery(QuerySelectAllPVZs).
+			WillReturnRows(rows)
+
+		_, err := repo.SelectAllPVZs(ctx)
+		require.Error(t, err)
+	})
+	t.Run("query error", func(t *testing.T) {
+		mockPool.
+			ExpectQuery(QuerySelectAllPVZs).
+			WillReturnError(errors.New("fatal"))
+
+		_, err := repo.SelectAllPVZs(ctx)
+		require.Error(t, err)
+	})
+	t.Run("scan error", func(t *testing.T) {
+		rows := pgxmock.NewRows([]string{"id", "city", "registration_date"}).
+			AddRow(uuid.New().String(), "C", "not-a-timestamp")
 		mockPool.
 			ExpectQuery(QuerySelectAllPVZs).
 			WillReturnRows(rows)

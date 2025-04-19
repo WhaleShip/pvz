@@ -91,6 +91,24 @@ func TestCreatePVZ(t *testing.T) {
 		mockRepo.AssertExpectations(t)
 		mockMetrics.AssertExpectations(t)
 	})
+	t.Run("metrics nil", func(t *testing.T) {
+		mockRepo := new(mockPVZRepo)
+		svc := NewPVZService(mockRepo, nil, nil, nil)
+
+		req := oapi.PostPvzJSONRequestBody{City: oapi.Москва}
+		returned := oapi.PVZ{Id: uuidPtr(uuid.New()), City: req.City}
+
+		mockRepo.
+			On("InsertPVZ", mock.Anything, req.City, mock.Anything).
+			Return(returned, nil).
+			Once()
+
+		res, err := svc.CreatePVZ(ctx, req)
+		require.NoError(t, err)
+		require.Equal(t, returned, res)
+
+		mockRepo.AssertExpectations(t)
+	})
 }
 
 func TestGetPVZ(t *testing.T) {
@@ -163,6 +181,68 @@ func TestGetPVZ(t *testing.T) {
 		mockPVZ.AssertExpectations(t)
 		mockRec.AssertExpectations(t)
 		mockProd.AssertExpectations(t)
+	})
+
+	t.Run("success with data", func(t *testing.T) {
+		mockPVZ := new(mockPVZRepo)
+		mockRec := new(mockReceptionReader)
+		mockProd := new(mockProductReader)
+		svc := NewPVZService(mockPVZ, mockRec, mockProd, nil)
+
+		now := time.Now()
+		pvzID := uuid.New()
+		pvz := oapi.PVZ{Id: &pvzID, City: oapi.Москва, RegistrationDate: &now}
+		mockPVZ.
+			On("SelectPVZByOpenReceptions", mock.Anything, mock.Anything, mock.Anything, 10, 0).
+			Return([]oapi.PVZ{pvz}, nil)
+
+		rec1 := dto.Reception{Id: uuidPtr(uuid.New()), PvzId: pvzID, DateTime: now, Status: oapi.InProgress}
+		rec2 := dto.Reception{Id: uuidPtr(uuid.New()), PvzId: pvzID, DateTime: now.Add(time.Hour), Status: oapi.Close}
+		mockRec.
+			On("GetReceptionsByPVZ", mock.Anything, pvzID).
+			Return([]dto.Reception{rec1, rec2}, nil)
+
+		prod1 := oapi.Product{Id: uuidPtr(uuid.New()), ReceptionId: *rec1.Id, DateTime: &now, Type: oapi.ProductType("X")}
+		prod2 := oapi.Product{Id: uuidPtr(uuid.New()), ReceptionId: *rec2.Id, DateTime: &now, Type: oapi.ProductType("Y")}
+		mockProd.
+			On("GetProductsByReceptionIDs", mock.Anything, []*uuid.UUID{rec1.Id, rec2.Id}).
+			Return([]oapi.Product{prod1, prod2}, nil)
+
+		out, err := svc.GetPVZ(context.Background(), oapi.GetPvzParams{})
+		require.NoError(t, err)
+		require.Len(t, out, 1)
+		entry := out[0]
+		require.Equal(t, pvz, entry.Pvz)
+		require.Len(t, entry.Receptions, 2)
+		require.Equal(t, prod1, entry.Receptions[0].Products[0])
+		require.Equal(t, prod2, entry.Receptions[1].Products[0])
+
+		mockPVZ.AssertExpectations(t)
+		mockRec.AssertExpectations(t)
+		mockProd.AssertExpectations(t)
+	})
+
+	t.Run("pagination params", func(t *testing.T) {
+		mockPVZ := new(mockPVZRepo)
+		svc := NewPVZService(mockPVZ, nil, nil, nil)
+
+		page, limit := 2, 5
+		params := oapi.GetPvzParams{Page: &page, Limit: &limit}
+		mockPVZ.
+			On("SelectPVZByOpenReceptions",
+				mock.Anything,
+				mock.Anything,
+				mock.Anything,
+				limit,
+				(page-1)*limit,
+			).
+			Return([]oapi.PVZ{}, nil)
+
+		out, err := svc.GetPVZ(context.Background(), params)
+		require.NoError(t, err)
+		require.Len(t, out, 0)
+
+		mockPVZ.AssertExpectations(t)
 	})
 }
 

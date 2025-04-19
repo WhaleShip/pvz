@@ -26,10 +26,8 @@ func (s *authService) RegisterUser(ctx context.Context, req oapi.PostRegisterJSO
 	if req.Role != oapi.Employee && req.Role != oapi.Moderator {
 		return oapi.User{}, pvz_errors.ErrInvalidRole
 	}
-	hashedPass, err := utils.HashPassword(req.Password)
-	if err != nil {
-		return oapi.User{}, err
-	}
+	hashedPass := utils.HashPassword(req.Password)
+
 	newUserID := uuid.New()
 	if err := s.userRepo.InsertUser(ctx, newUserID, string(req.Email), hashedPass, string(req.Role)); err != nil {
 		return oapi.User{}, err

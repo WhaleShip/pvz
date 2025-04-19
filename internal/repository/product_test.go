@@ -204,6 +204,16 @@ func TestGetProductsByReceptionIDs(t *testing.T) {
 		require.Error(t, err)
 	})
 
+	t.Run("query no rows", func(t *testing.T) {
+		mockPool.
+			ExpectQuery(QueryGetProductsByReceptions).
+			WithArgs(ids).
+			WillReturnError(db.ErrNoRows())
+
+		_, err := repo.GetProductsByReceptionIDs(ctx, ids)
+		require.ErrorIs(t, err, pvz_errors.ErrSelectProductsFailed)
+	})
+
 	t.Run("scan error", func(t *testing.T) {
 		rows := pgxmock.NewRows([]string{"id", "reception_id", "date_time", "type"}).
 			AddRow("bad-uuid", *ids[0], time.Now(), "A")
@@ -216,6 +226,20 @@ func TestGetProductsByReceptionIDs(t *testing.T) {
 		require.Error(t, err)
 	})
 
+	t.Run("scan no rows", func(t *testing.T) {
+		validID := uuid.New()
+		rows := pgxmock.NewRows([]string{"id", "reception_id", "date_time", "type"}).
+			AddRow(validID, *ids[0], time.Now(), "A").
+			RowError(0, db.ErrNoRows())
+		mockPool.
+			ExpectQuery(QueryGetProductsByReceptions).
+			WithArgs(ids).
+			WillReturnRows(rows)
+
+		_, err := repo.GetProductsByReceptionIDs(ctx, ids)
+		require.ErrorIs(t, err, pvz_errors.ErrSelectProductsFailed)
+	})
+
 	t.Run("rows error after next", func(t *testing.T) {
 		rows := pgxmock.NewRows([]string{"id", "reception_id", "date_time", "type"}).
 			RowError(0, errors.New("row fail"))
@@ -226,6 +250,18 @@ func TestGetProductsByReceptionIDs(t *testing.T) {
 
 		_, err := repo.GetProductsByReceptionIDs(ctx, ids)
 		require.Error(t, err)
+	})
+
+	t.Run("rows Err no rows", func(t *testing.T) {
+		rows := pgxmock.NewRows([]string{"id", "reception_id", "date_time", "type"}).
+			RowError(0, db.ErrNoRows())
+		mockPool.
+			ExpectQuery(QueryGetProductsByReceptions).
+			WithArgs(ids).
+			WillReturnRows(rows)
+
+		_, err := repo.GetProductsByReceptionIDs(ctx, ids)
+		require.ErrorIs(t, err, pvz_errors.ErrSelectProductsFailed)
 	})
 }
 

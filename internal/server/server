@@ -1,0 +1,298 @@
+package server
+
+import (
+	"fmt"
+	"reflect"
+	"testing"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
+	"github.com/valyala/fasthttp"
+	"github.com/whaleship/pvz/internal/gen/oapi"
+)
+
+func TestRegisterGRPCHandlers(t *testing.T) {
+	t.Run("returns a grpc.Server instance", func(t *testing.T) {
+		srv := &Server{}
+		grpcServer := srv.RegisterGRPCHandlers()
+		require.NotNil(t, grpcServer)
+		require.Equal(t, "*grpc.Server", reflect.TypeOf(grpcServer).String())
+	})
+}
+
+func TestRegisterHttpHandlers(t *testing.T) {
+	t.Run("routes are registered correctly", func(t *testing.T) {
+		var srv Server
+		app := fiber.New()
+		srv.RegisterHttpHandlers(app)
+
+		all := app.GetRoutes()
+		var routes []fiber.Route
+		for _, r := range all {
+			if r.Method != fiber.MethodHead {
+				routes = append(routes, r)
+			}
+		}
+		require.Len(t, routes, 9)
+
+		routeMap := make(map[string]fiber.Route, len(routes))
+		for _, r := range routes {
+			routeMap[r.Method+" "+r.Path] = r
+		}
+
+		public := []string{
+			"POST /dummyLogin",
+			"POST /login",
+			"POST /register",
+		}
+		authProtected := []string{
+			"POST /pvz",
+			"GET /pvz",
+			"POST /products",
+			"POST /pvz/:pvzId/delete_last_product",
+			"POST /receptions",
+			"POST /pvz/:pvzId/close_last_reception",
+		}
+
+		for _, p := range public {
+			r, ok := routeMap[p]
+			require.True(t, ok, fmt.Sprintf("public route %q not registered", p))
+			require.Len(t, r.Handlers, 2)
+		}
+
+		for _, p := range authProtected {
+			r, ok := routeMap[p]
+			require.True(t, ok, fmt.Sprintf("auth-protected route %q not registered", p))
+			require.Len(t, r.Handlers, 4)
+		}
+	})
+}
+
+func dummyCtx() *fiber.Ctx {
+	app := fiber.New()
+	ctx := app.AcquireCtx(&fasthttp.RequestCtx{})
+	ctx.Request().Header.SetContentType("application/json")
+	ctx.Request().SetBody([]byte(`{}`))
+	return ctx
+}
+
+func TestServer_PostDummyLogin(t *testing.T) {
+	srv := &Server{}
+	dc := dummyCtx()
+
+	t.Run("nil context panic", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expected panic")
+			}
+		}()
+		srv.PostDummyLogin(nil)
+	})
+	t.Run("empty context panic", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expected panic")
+			}
+		}()
+		_ = srv.PostDummyLogin(dc)
+	})
+}
+
+func TestServer_PostLogin(t *testing.T) {
+	srv := &Server{}
+	dc := dummyCtx()
+
+	t.Run("nil context panic", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expected panic")
+			}
+		}()
+		srv.PostLogin(nil)
+	})
+	t.Run("empty context panic", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expected panic")
+			}
+		}()
+		_ = srv.PostLogin(dc)
+	})
+}
+
+func TestServer_PostRegister(t *testing.T) {
+	srv := &Server{}
+	dc := dummyCtx()
+
+	t.Run("nil context panic", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expected panic")
+			}
+		}()
+		srv.PostRegister(nil)
+	})
+	t.Run("empty context panic", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expected panic")
+			}
+		}()
+		_ = srv.PostRegister(dc)
+	})
+}
+
+func TestServer_PostPvz(t *testing.T) {
+	srv := &Server{}
+	dc := dummyCtx()
+
+	t.Run("nil context panic", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expected panic")
+			}
+		}()
+		srv.PostPvz(nil)
+	})
+	t.Run("empty context panic", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expected panic")
+			}
+		}()
+		_ = srv.PostPvz(dc)
+	})
+}
+
+func TestServer_GetPvz(t *testing.T) {
+	srv := &Server{}
+	dc := dummyCtx()
+	params := oapi.GetPvzParams{}
+
+	t.Run("nil context panic", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expected panic")
+			}
+		}()
+		srv.GetPvz(nil, params)
+	})
+	t.Run("empty context panic", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expected panic")
+			}
+		}()
+		_ = srv.GetPvz(dc, params)
+	})
+}
+
+func TestServer_PostProducts(t *testing.T) {
+	srv := &Server{}
+	dc := dummyCtx()
+
+	t.Run("nil context panic", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expected panic")
+			}
+		}()
+		srv.PostProducts(nil)
+	})
+	t.Run("empty context panic", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expected panic")
+			}
+		}()
+		_ = srv.PostProducts(dc)
+	})
+}
+
+func TestServer_PostPvzPvzIdDeleteLastProduct(t *testing.T) {
+	srv := &Server{}
+	dc := dummyCtx()
+	id := uuid.New()
+
+	t.Run("nil context panic", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expected panic")
+			}
+		}()
+		srv.PostPvzPvzIdDeleteLastProduct(nil, id)
+	})
+	t.Run("empty context panic", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expected panic")
+			}
+		}()
+		_ = srv.PostPvzPvzIdDeleteLastProduct(dc, id)
+	})
+}
+
+func TestServer_PostPvzPvzIdCloseLastReception(t *testing.T) {
+	srv := &Server{}
+	dc := dummyCtx()
+	id := uuid.New()
+
+	t.Run("nil context panic", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expected panic")
+			}
+		}()
+		srv.PostPvzPvzIdCloseLastReception(nil, id)
+	})
+	t.Run("empty context panic", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expected panic")
+			}
+		}()
+		_ = srv.PostPvzPvzIdCloseLastReception(dc, id)
+	})
+}
+
+func TestServer_PostReceptions(t *testing.T) {
+	srv := &Server{}
+	dc := dummyCtx()
+
+	t.Run("nil context panic", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expected panic")
+			}
+		}()
+		srv.PostReceptions(nil)
+	})
+	t.Run("empty context panic", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expected panic")
+			}
+		}()
+		_ = srv.PostReceptions(dc)
+	})
+}
+
+func TestNewServer(t *testing.T) {
+	srv := NewServer(nil, nil)
+
+	t.Run("handlers initialized", func(t *testing.T) {
+		if srv.AuthHandler == nil {
+			t.Errorf("AuthHandler is nil")
+		}
+		if srv.PVZHandler == nil {
+			t.Errorf("PVZHandler is nil")
+		}
+		if srv.ProductHandler == nil {
+			t.Errorf("ProductHandler is nil")
+		}
+		if srv.ReceptionHandler == nil {
+			t.Errorf("ReceptionHandler is nil")
+		}
+	})
+}

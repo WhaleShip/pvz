@@ -222,6 +222,37 @@ func TestGetPVZ(t *testing.T) {
 		mockProd.AssertExpectations(t)
 	})
 
+	t.Run("with start and end dates", func(t *testing.T) {
+		mockPVZ := new(mockPVZRepo)
+		mockRec := new(mockReceptionReader)
+		mockProd := new(mockProductReader)
+		svc := NewPVZService(mockPVZ, mockRec, mockProd, nil)
+
+		startDate := time.Now().Add(-24 * time.Hour)
+		endDate := time.Now()
+		params := oapi.GetPvzParams{
+			StartDate: &startDate,
+			EndDate:   &endDate,
+		}
+
+		pvzList := []oapi.PVZ{{Id: uuidPtr(uuid.New()), City: oapi.Москва, RegistrationDate: &endDate}}
+		mockPVZ.
+			On("SelectPVZByOpenReceptions", mock.Anything, startDate, endDate, 10, 0).
+			Return(pvzList, nil)
+		mockRec.
+			On("GetReceptionsByPVZ", mock.Anything, *pvzList[0].Id).
+			Return([]dto.Reception{}, nil)
+
+		out, err := svc.GetPVZ(ctx, params)
+		require.NoError(t, err)
+		require.Len(t, out, 1)
+		require.Equal(t, pvzList[0], out[0].Pvz)
+		require.Len(t, out[0].Receptions, 0)
+
+		mockPVZ.AssertExpectations(t)
+		mockRec.AssertExpectations(t)
+	})
+
 	t.Run("pagination params", func(t *testing.T) {
 		mockPVZ := new(mockPVZRepo)
 		svc := NewPVZService(mockPVZ, nil, nil, nil)
@@ -243,6 +274,89 @@ func TestGetPVZ(t *testing.T) {
 		require.Len(t, out, 0)
 
 		mockPVZ.AssertExpectations(t)
+	})
+	t.Run("skip receptions not belonging to PVZ", func(t *testing.T) {
+		mockPVZ := new(mockPVZRepo)
+		mockRec := new(mockReceptionReader)
+		mockProd := new(mockProductReader)
+		svc := NewPVZService(mockPVZ, mockRec, mockProd, nil)
+
+		now := time.Now()
+		pvzID1 := uuid.New()
+		pvzID2 := uuid.New()
+		pvz1 := oapi.PVZ{Id: &pvzID1, City: oapi.Москва, RegistrationDate: &now}
+		pvz2 := oapi.PVZ{Id: &pvzID2, City: oapi.Казань, RegistrationDate: &now}
+
+		mockPVZ.
+			On("SelectPVZByOpenReceptions", mock.Anything, mock.Anything, mock.Anything, 10, 0).
+			Return([]oapi.PVZ{pvz1, pvz2}, nil)
+
+		rec1 := dto.Reception{Id: uuidPtr(uuid.New()), PvzId: pvzID1, DateTime: now, Status: oapi.InProgress}
+		rec2 := dto.Reception{Id: uuidPtr(uuid.New()), PvzId: pvzID2, DateTime: now, Status: oapi.InProgress}
+		rec3 := dto.Reception{Id: uuidPtr(uuid.New()), PvzId: pvzID1, DateTime: now, Status: oapi.Close}
+
+		mockRec.
+			On("GetReceptionsByPVZ", mock.Anything, pvzID1).
+			Return([]dto.Reception{rec1, rec3}, nil)
+		mockRec.
+			On("GetReceptionsByPVZ", mock.Anything, pvzID2).
+			Return([]dto.Reception{rec2}, nil)
+
+		prod1 := oapi.Product{Id: uuidPtr(uuid.New()), ReceptionId: *rec1.Id, DateTime: &now, Type: oapi.ProductType("X")}
+		prod2 := oapi.Product{Id: uuidPtr(uuid.New()), ReceptionId: *rec2.Id, DateTime: &now, Type: oapi.ProductType("Y")}
+		prod3 := oapi.Product{Id: uuidPtr(uuid.New()), ReceptionId: *rec3.Id, DateTime: &now, Type: oapi.ProductType("Z")}
+
+		mockProd.
+			On("GetProductsByReceptionIDs", mock.Anything, mock.MatchedBy(uuidSliceMatcher([]*uuid.UUID{rec1.Id, rec2.Id, rec3.Id}))).
+			Return([]oapi.Product{prod1, prod2, prod3}, nil)
+
+		out, err := svc.GetPVZ(ctx, oapi.GetPvzParams{})
+		require.NoError(t, err)
+		require.Len(t, out, 2)
+
+		pvz1Entry := out[0]
+		require.Equal(t, pvz1, pvz1Entry.Pvz)
+		require.Len(t, pvz1Entry.Receptions, 2)
+		require.Equal(t, rec1, pvz1Entry.Receptions[0].Reception)
+		require.Equal(t, prod1, pvz1Entry.Receptions[0].Products[0])
+		require.Equal(t, rec3, pvz1Entry.Receptions[1].Reception)
+		require.Equal(t, prod3, pvz1Entry.Receptions[1].Products[0])
+
+		pvz2Entry := out[1]
+		require.Equal(t, pvz2, pvz2Entry.Pvz)
+		require.Len(t, pvz2Entry.Receptions, 1)
+		require.Equal(t, rec2, pvz2Entry.Receptions[0].Reception)
+		require.Equal(t, prod2, pvz2Entry.Receptions[0].Products[0])
+
+		mockPVZ.AssertExpectations(t)
+		mockRec.AssertExpectations(t)
+		mockProd.AssertExpectations(t)
+	})
+	t.Run("error getting receptions", func(t *testing.T) {
+		mockPVZ := new(mockPVZRepo)
+		mockRec := new(mockReceptionReader)
+		mockProd := new(mockProductReader)
+		svc := NewPVZService(mockPVZ, mockRec, mockProd, nil)
+
+		now := time.Now()
+		pvzID := uuid.New()
+		pvz := oapi.PVZ{Id: &pvzID, City: oapi.Москва, RegistrationDate: &now}
+
+		mockPVZ.
+			On("SelectPVZByOpenReceptions", mock.Anything, mock.Anything, mock.Anything, 10, 0).
+			Return([]oapi.PVZ{pvz}, nil)
+
+		mockRec.
+			On("GetReceptionsByPVZ", mock.Anything, pvzID).
+			Return([]dto.Reception{}, errors.New("db error"))
+
+		_, err := svc.GetPVZ(ctx, oapi.GetPvzParams{})
+		require.Error(t, err)
+		require.ErrorIs(t, err, pvz_errors.ErrSelectReceptionsFailed)
+		require.Contains(t, err.Error(), "db error")
+
+		mockPVZ.AssertExpectations(t)
+		mockRec.AssertExpectations(t)
 	})
 }
 
@@ -278,4 +392,22 @@ func TestGetAllPVZs(t *testing.T) {
 		require.Equal(t, list, res)
 		mockPVZ.AssertExpectations(t)
 	})
+}
+
+func uuidSliceMatcher(expected []*uuid.UUID) func([]*uuid.UUID) bool {
+	return func(actual []*uuid.UUID) bool {
+		if len(actual) != len(expected) {
+			return false
+		}
+		actualSet := make(map[uuid.UUID]bool)
+		for _, id := range actual {
+			actualSet[*id] = true
+		}
+		for _, id := range expected {
+			if !actualSet[*id] {
+				return false
+			}
+		}
+		return true
+	}
 }

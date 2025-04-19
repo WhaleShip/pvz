@@ -5,10 +5,10 @@ import (
 	"encoding/hex"
 )
 
-func HashPassword(password string) (string, error) {
+func HashPassword(password string) string {
 	hash := sha256.New()
 	hash.Write([]byte(password))
-	return hex.EncodeToString(hash.Sum(nil)), nil
+	return hex.EncodeToString(hash.Sum(nil))
 }
 
 func IsCorrectPassword(hashedPassword, password string) bool {

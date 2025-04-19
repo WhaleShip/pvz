@@ -40,7 +40,7 @@ func TestRegisterUser(t *testing.T) {
 
 	t.Run("insert error", func(t *testing.T) {
 		req := oapi.PostRegisterJSONRequestBody{Email: "vozmiteVAvito@pj.com", Password: "pwd", Role: oapi.Employee}
-		hashed, _ := utils.HashPassword(req.Password)
+		hashed := utils.HashPassword(req.Password)
 		mockRepo.
 			On("InsertUser", mock.Anything, mock.AnythingOfType("uuid.UUID"), string(req.Email), hashed, string(req.Role)).
 			Return(errors.New("db fail"))
@@ -52,7 +52,7 @@ func TestRegisterUser(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		req := oapi.PostRegisterJSONRequestBody{Email: "vozmiteVAvito@pj.com", Password: "pwd", Role: oapi.Moderator}
-		hashed, _ := utils.HashPassword(req.Password)
+		hashed := utils.HashPassword(req.Password)
 		var capturedID uuid.UUID
 		mockRepo.
 			On("InsertUser", mock.Anything, mock.AnythingOfType("uuid.UUID"), string(req.Email), hashed, string(req.Role)).
@@ -93,7 +93,7 @@ func TestLoginUser(t *testing.T) {
 		svc := NewAuthService(mockRepo)
 
 		req := oapi.PostLoginJSONRequestBody{Email: "x@y.com", Password: "pw"}
-		otherHash, _ := utils.HashPassword("other")
+		otherHash := utils.HashPassword("other")
 		mockRepo.
 			On("GetUserByEmail", mock.Anything, string(req.Email)).
 			Return(uuid.New(), otherHash, string(oapi.Employee), nil).
@@ -109,7 +109,7 @@ func TestLoginUser(t *testing.T) {
 		svc := NewAuthService(mockRepo)
 
 		req := oapi.PostLoginJSONRequestBody{Email: "x@y.com", Password: "pw"}
-		hashed, _ := utils.HashPassword(req.Password)
+		hashed := utils.HashPassword(req.Password)
 		userID := uuid.New()
 		role := string(oapi.Moderator)
 

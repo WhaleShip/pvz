@@ -340,5 +340,4 @@ func TestHandleIPCConnection(t *testing.T) {
 		time.Sleep(20 * time.Millisecond)
 		require.Equal(t, metrics.MetricsUpdate{}, aggregator.received)
 	})
-
 }

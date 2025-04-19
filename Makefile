@@ -6,9 +6,16 @@ ENV_VARS = \
     POSTGRES_PASSWORD=password \
     POSTGRES_HOST=db \
     POSTGRES_PORT=5432 \
+	PGBOUNCER_HOST=pgbouncer\
+	PGBOUNCER_PORT=6432\
+	DB_HOST=pgbouncer\
+	DB_PORT=6432\
+	DB_USER=user\
+	DB_PASSWORD=password\
+	DB_NAME=avito\
 	SSL_MODE=disable \
 	JWTSECRET=dontHackMePls \
-
+	
 PROTO_DIR=proto/v1/
 OUT_DIR=internal/gen/proto
 

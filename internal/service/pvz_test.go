@@ -307,7 +307,8 @@ func TestGetPVZ(t *testing.T) {
 		prod3 := oapi.Product{Id: uuidPtr(uuid.New()), ReceptionId: *rec3.Id, DateTime: &now, Type: oapi.ProductType("Z")}
 
 		mockProd.
-			On("GetProductsByReceptionIDs", mock.Anything, mock.MatchedBy(uuidSliceMatcher([]*uuid.UUID{rec1.Id, rec2.Id, rec3.Id}))).
+			On("GetProductsByReceptionIDs",
+				mock.Anything, mock.MatchedBy(uuidSliceMatcher([]*uuid.UUID{rec1.Id, rec2.Id, rec3.Id}))).
 			Return([]oapi.Product{prod1, prod2, prod3}, nil)
 
 		out, err := svc.GetPVZ(ctx, oapi.GetPvzParams{})

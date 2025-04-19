@@ -43,7 +43,8 @@ cover-html:
 
 test:
 	go test -v ./...
-
+test-int:
+	go test -v -tags=integration ./tests/integration_test
 gen:
 	go generate ./...
 	go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen -o internal/gen/oapi/dto.go -generate types -package oapi api/v1/swagger.yaml

@@ -14,7 +14,7 @@ import (
 
 type PVZApp struct {
 	isPrefork bool
-	pvz       *fiber.App
+	PVZ       *fiber.App
 	srv       *server.Server
 	grpcSrv   *grpc.Server
 	db        database.PgxIface
@@ -27,25 +27,32 @@ func New(isPrefork bool) *PVZApp {
 	app := fiber.New(fiber.Config{Prefork: isPrefork})
 	app.Use(logger.New())
 
+	return &PVZApp{
+		isPrefork: isPrefork,
+		PVZ:       app,
+	}
+}
+
+func (app *PVZApp) InitDBConnection() {
 	dbConn, err := database.GetInitializedDB()
 	if err != nil {
 		log.Fatalf("db connection error: %v", err)
 	}
-	return &PVZApp{
-		isPrefork: isPrefork,
-		pvz:       app,
-		db:        &database.PgxPoolAdapter{Pool: dbConn},
-	}
+	app.db = &database.PgxPoolAdapter{Pool: dbConn}
 }
 
 func (app *PVZApp) Start() {
 	if app.aggregator != nil && app.ipcManager != nil {
 		go app.startMetrics()
 	}
-	if app.pvz != nil {
+	if app.PVZ != nil {
 		go app.startHTTPServer()
 	}
 	if app.grpcSrv != nil && !fiber.IsChild() {
 		go app.startGRPCServer()
 	}
+}
+
+func (app *PVZApp) GetDBConn() database.PgxIface {
+	return app.db
 }

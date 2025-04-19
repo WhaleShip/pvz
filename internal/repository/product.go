@@ -43,7 +43,8 @@ func (r *productRepository) InsertProduct(
 		if errors.Is(err, r.db.ErrNoRows()) {
 			return uuid.Nil, pvz_errors.ErrNoOpenRecetionOrPvz
 		}
-		if pgErr.Code == "23514" {
+
+		if errors.As(err, &pgErr) && pgErr.Code == "23514" {
 			return uuid.Nil, pvz_errors.ErrInvalidProduct
 		}
 		return uuid.Nil, err

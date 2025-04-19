@@ -12,6 +12,7 @@ func main() {
 	isPrefork := true
 	pvzApp := app.New(isPrefork)
 
+	pvzApp.InitDBConnection()
 	pvzApp.InitializeMetrics()
 	pvzApp.InitializeHTTPServer()
 	pvzApp.InitializeGRPCServer()

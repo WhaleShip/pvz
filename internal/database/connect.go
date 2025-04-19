@@ -26,9 +26,6 @@ func connectPostgres(cfg Config) (*pgxpool.Pool, error) {
 			cfg.DBName,
 			maxConn,
 		))
-	if err != nil {
-		panic(err)
-	}
 
 	if err != nil {
 		return nil, fmt.Errorf("db connection failed: %w", err)

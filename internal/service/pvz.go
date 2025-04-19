@@ -138,11 +138,22 @@ func (s *pvzService) GetPVZ(ctx context.Context, params oapi.GetPvzParams) ([]dt
 		limit = *params.Limit
 	}
 	offset := (page - 1) * limit
+	var startDate, endDate time.Time
 
+	if params.StartDate != nil {
+		startDate = *params.StartDate
+	} else {
+		startDate = time.Time{}
+	}
+	if params.EndDate != nil {
+		endDate = *params.EndDate
+	} else {
+		endDate = time.Now()
+	}
 	pvzList, err := s.pvzRepo.SelectPVZByOpenReceptions(
 		ctx,
-		params.StartDate.UTC(),
-		params.EndDate.UTC(),
+		startDate,
+		endDate,
 		limit,
 		offset,
 	)

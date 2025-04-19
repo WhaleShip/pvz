@@ -25,8 +25,8 @@ const (
 									FROM pvz
 									WHERE id IN (SELECT pvz_id FROM qualified_pvzs)
 									ORDER BY registration_date DESC
-									LIMIT $3 OFFSET $4;
-									`
+									LIMIT $3 OFFSET $4;`
+
 	QuerySelectAllPVZs = `SELECT id, city, registration_date FROM pvz`
 
 	// recepiton

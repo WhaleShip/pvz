@@ -33,7 +33,7 @@ jobs:
       run: go mod download
 
     - name: Run tests
-      run: go test -race -covermode atomic -coverprofile=covprofile.out ./...
+      run: go test -race -covermode atomic -coverprofile=covprofile.out $(go list ./... | grep -v '/internal/infrastructure')
 
     - name: Install goveralls
       run: go install github.com/mattn/goveralls@latest

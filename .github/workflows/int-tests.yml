@@ -1,14 +1,18 @@
-name: unit-tests
-on: [ push, pull_request ]
+name: integration-tests
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
 jobs:
-  test:
-    name: Test with Coverage
+  integration-test:
+    name: Run Integration Tests
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
-        go-version: [ 1.24.2 ]
-
+        go-version: [ "1.24.2" ]
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -31,13 +35,5 @@ jobs:
     - name: Install dependencies
       run: go mod download
 
-    - name: Run tests
-      run: go test -race -covermode atomic -coverprofile=covprofile $(go list ./... | grep -v '/internal/infrastructure')
-
-    - name: Install goveralls
-      run: go install github.com/mattn/goveralls@latest
-
-    - name: Send coverage
-      env:
-        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: goveralls -coverprofile=covprofile -service=github
+    - name: Run integration tests
+      run: go test -v -tags=integration ./tests/integration_test

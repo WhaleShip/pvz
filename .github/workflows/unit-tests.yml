@@ -31,8 +31,22 @@ jobs:
     - name: Install dependencies
       run: go mod download
 
-    - name: Run tests
-      run: go test -race -covermode atomic -coverprofile=covprofile $(go list ./... | grep -v '/internal/infrastructure')
+    - name: Run unit tests
+      run: |
+        go test -race -covermode atomic -coverprofile=cov_unit.out $(go list ./... | grep -v '/internal/infrastructure')
+
+    - name: Run integration tests
+      run: |
+        go test -v -tags=integration -covermode atomic -coverprofile=cov_integration.out ./tests/integration_test
+
+    - name: Install gocovmerge
+      run: |
+        go install github.com/wadey/gocovmerge@latest
+        echo "$GOPATH/bin" >> $GITHUB_PATH
+
+    - name: Merge coverage profiles
+      run: |
+        gocovmerge cov_unit.out cov_integration.out > covprofile
 
     - name: Install goveralls
       run: go install github.com/mattn/goveralls@latest

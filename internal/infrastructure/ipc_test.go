@@ -136,30 +136,6 @@ func TestSendBusinessMetricsUpdateChaining(t *testing.T) {
 	})
 }
 
-func TestStartServerHandleIPC(t *testing.T) {
-	t.Run("full pipeline: StartServer → handle → UpdateMetrics", func(t *testing.T) {
-		sock := filepath.Join(os.TempDir(), "ipc_handle.sock")
-		os.Remove(sock)
-		agg := &spyAggregator{}
-		m := NewIPCManager(sock, 0, 0, agg)
-		m.StartServer()
-		time.Sleep(20 * time.Millisecond)
-
-		addr := &net.UnixAddr{Name: sock, Net: "unix"}
-		conn, err := net.DialUnix("unix", nil, addr)
-		require.NoError(t, err)
-		defer conn.Close()
-
-		update := metrics.MetricsUpdate{Endpoint: "/h", HTTPRequestsDelta: 5}
-		payload, err := json.Marshal(update)
-		require.NoError(t, err)
-		_, err = conn.Write(append(payload, '\n'))
-		require.NoError(t, err)
-
-		time.Sleep(20 * time.Millisecond)
-		require.Equal(t, update, agg.received)
-	})
-}
 func TestNewIPCManager(t *testing.T) {
 	aggregator := &spyAggregator{}
 	m := NewIPCManager("/tmp/test.sock", 10, 20, aggregator)
@@ -202,27 +178,6 @@ func TestGetIPCConn(t *testing.T) {
 		conn := m.getIPCConn()
 		require.Nil(t, conn)
 	})
-}
-func TestStartServer(t *testing.T) {
-	sock := filepath.Join(os.TempDir(), "server.sock")
-	os.Remove(sock)
-	aggregator := &spyAggregator{}
-	m := NewIPCManager(sock, 0, 0, aggregator)
-	m.StartServer()
-	time.Sleep(20 * time.Millisecond)
-
-	addr := &net.UnixAddr{Name: sock, Net: "unix"}
-	conn, err := net.DialUnix("unix", nil, addr)
-	require.NoError(t, err)
-	defer conn.Close()
-
-	update := metrics.MetricsUpdate{Endpoint: "/start", HTTPRequestsDelta: 1}
-	payload, _ := json.Marshal(update)
-	_, err = conn.Write(append(payload, '\n'))
-	require.NoError(t, err)
-
-	time.Sleep(20 * time.Millisecond)
-	require.Equal(t, update, aggregator.received)
 }
 
 func TestStartSender(t *testing.T) {

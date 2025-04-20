@@ -1,14 +1,18 @@
-name: unit-tests
-on: [ push, pull_request ]
+name: tests
+
+on:
+  push:
+    branches:
+    - main
+
 jobs:
   test:
-    name: Test with Coverage
+    name: Run Go Tests
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
         go-version: [ 1.24.2 ]
-        os: [ ubuntu-latest, macos-latest, windows-latest ]
 
     steps:
     - name: Checkout repository
@@ -33,25 +37,4 @@ jobs:
       run: go mod download
 
     - name: Run tests
-      run: go test -race -covermode atomic -coverprofile=covprofile.out $(go list ./... | grep -v '/internal/infrastructure')
-
-    - name: Install goveralls
-      run: go install github.com/mattn/goveralls@latest
-
-    - name: Report Coveralls (Linux)
-      if: startsWith(runner.os, 'Linux')
-      env:
-        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: goveralls -coverprofile=covprofile.out -service=github
-
-    - name: Report Coveralls (Windows)
-      if: startsWith(runner.os, 'Windows')
-      env:
-        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: goveralls -coverprofile=covprofile.out -service=github
-
-    - name: Report Coveralls (macOS)
-      if: startsWith(runner.os, 'macOS')
-      env:
-        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: goveralls -coverprofile=covprofile.out -service=github
+      run: go test ./... -v -coverprofile=coverage.out

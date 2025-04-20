@@ -1,5 +1,9 @@
 # Сервис для работы с ПВЗ
 
+[![Coverage Status](https://coveralls.io/repos/github/WhaleShip/pvz/badge.svg?branch=main)](https://coveralls.io/github/WhaleShip/pvz?branch=main)
+[![linters](https://github.com/WhaleShip/pvz/actions/workflows/golangci-lint.yml/badge.svg)](https://github.com/WhaleShip/pvz/actions/workflows/golangci-lint.yml)
+[![unit-tests](https://github.com/WhaleShip/pvz/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/WhaleShip/pvz/actions/workflows/unit-tests.yml)
+
 ## Краткая сводка
 
 - ### написано на go 1.24.2 с использованием fiber (prefork)
@@ -48,9 +52,8 @@ grpc доступно на http://localhost:3000
 
 
 ## Остальной функционал
-> если проблемы с использованием makefile, все соответствующие команды можно найти в нём же
 ### unit тесты
-
+> только linux
 - Запустить тесты
 ```sh
 make test
@@ -64,7 +67,7 @@ make cover-html # через html файл
 
 
 ### Интеграционные тесты
-> для выполнения нужен докер, так что запускать нужно со среды где есть docker (из .devcontainer не получится) <br>
+> для выполнения нужен докер, так что запускать нужно со среды где есть docker
 ```sh
 make test-int
 ```

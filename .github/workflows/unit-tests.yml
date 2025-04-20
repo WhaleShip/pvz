@@ -1,13 +1,8 @@
-name: tests
-
-on:
-  push:
-    branches:
-    - main
-
+name: unit-tests
+on: [ push, pull_request ]
 jobs:
   test:
-    name: Run Go Tests
+    name: Test with Coverage
     runs-on: ubuntu-latest
 
     strategy:
@@ -37,4 +32,12 @@ jobs:
       run: go mod download
 
     - name: Run tests
-      run: go test ./... -v -coverprofile=coverage.out
+      run: go test -race -covermode atomic -coverprofile=covprofile $(go list ./... | grep -v '/internal/infrastructure')
+
+    - name: Install goveralls
+      run: go install github.com/mattn/goveralls@latest
+
+    - name: Send coverage
+      env:
+        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: goveralls -coverprofile=covprofile -service=github

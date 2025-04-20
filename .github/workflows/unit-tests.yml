@@ -1,0 +1,57 @@
+name: unit-tests
+on: [ push, pull_request ]
+jobs:
+  test:
+    name: Test with Coverage
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        go-version: [ 1.24.2 ]
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Go ${{ matrix.go-version }}
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ matrix.go-version }}
+
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-${{ matrix.go-version }}-
+
+    - name: Install dependencies
+      run: go mod download
+
+    - name: Run tests
+      run: go test -race -covermode atomic -coverprofile=covprofile.out ./...
+
+    - name: Install goveralls
+      run: go install github.com/mattn/goveralls@latest
+
+    - name: Report Coveralls (Linux)
+      if: startsWith(runner.os, 'Linux')
+      env:
+        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: goveralls -coverprofile=covprofile.out -service=github
+
+    - name: Report Coveralls (Windows)
+      if: startsWith(runner.os, 'Windows')
+      env:
+        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: goveralls -coverprofile=covprofile.out -service=github
+
+    - name: Report Coveralls (macOS)
+      if: startsWith(runner.os, 'macOS')
+      env:
+        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: goveralls -coverprofile=covprofile.out -service=github

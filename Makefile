@@ -15,6 +15,7 @@ ENV_VARS = \
 	DB_NAME=avito\
 	SSL_MODE=disable \
 	JWTSECRET=dontHackMePls \
+	IS_PREFORK=true\
 	
 PROTO_DIR=proto/v1/
 OUT_DIR=internal/gen/proto
@@ -27,11 +28,14 @@ env:
 run:
 	docker compose up --build
 
+run-full:
+	COMPOSE_PROFILES=logging docker compose up --build
+
 runl:
 	go run cmd/pvz/main.go
 
 off:
-	docker compose down
+	COMPOSE_PROFILES=logging docker compose down
 
 build:
 	docker compose build

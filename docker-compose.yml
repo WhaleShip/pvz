@@ -50,3 +50,44 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+  
+  loki:
+    container_name: avito-loki
+    image: grafana/loki:latest
+    restart: always
+    profiles: ["logging"]
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./grafana/loki-config.yaml:/etc/loki/local-config.yaml
+    command: -config.file=/etc/loki/local-config.yaml
+
+
+  promtail:
+    container_name: avito-promtail
+    image: grafana/promtail:latest
+    restart: always
+    profiles: ["logging"]
+    depends_on:
+      - loki
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/log:/var/log:ro
+      - ./grafana/promtail-config.yaml:/etc/promtail/promtail-config.yaml:ro
+    command: -config.file=/etc/promtail/promtail-config.yaml
+
+  grafana:
+    hostname: grafana
+    environment:
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_AUTH_ANONYMOUS_ENABLED=true 
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - TZ=${SYSTEM_TIMEZONE:-Europe/Moscow}
+    image: grafana/grafana:latest
+    restart: always
+    profiles: ["logging"]
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./grafana/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro

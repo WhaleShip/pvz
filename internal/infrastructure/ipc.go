@@ -120,7 +120,7 @@ func (m *IPCManager) handleIPCConnection(conn *net.UnixConn) {
 			continue
 		}
 		m.aggregator.UpdateMetrics(update)
-		log.Printf("ipc: received an update %+v", update)
+		// log.Printf("ipc: received an update %+v", update)
 	}
 	if err := scanner.Err(); err != nil {
 		log.Printf("ipc: error reading from connection: %v", err)

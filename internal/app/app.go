@@ -34,7 +34,7 @@ func New(isPrefork bool) *PVZApp {
 }
 
 func (app *PVZApp) InitDBConnection() {
-	dbConn, err := database.GetInitializedDB()
+	dbConn, err := database.GetInitializedDB(app.isPrefork)
 	if err != nil {
 		log.Fatalf("db connection error: %v", err)
 	}

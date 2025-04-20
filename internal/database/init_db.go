@@ -25,7 +25,7 @@ func getEnvVariable(name string) string {
 	return value
 }
 
-func GetInitializedDB() (*pgxpool.Pool, error) {
+func GetInitializedDB(isPrefork bool) (*pgxpool.Pool, error) {
 	cfg := Config{
 		Host:     getEnvVariable("DB_HOST"),
 		Port:     getEnvVariable("DB_PORT"),
@@ -34,7 +34,7 @@ func GetInitializedDB() (*pgxpool.Pool, error) {
 		DBName:   getEnvVariable("DB_NAME"),
 		SSLMode:  getEnvVariable("SSL_MODE"),
 	}
-	pool, err := connectPostgres(cfg)
+	pool, err := connectPostgres(isPrefork, cfg)
 	if err != nil {
 		return nil, err
 	}

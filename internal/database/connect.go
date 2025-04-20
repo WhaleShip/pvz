@@ -6,13 +6,12 @@ import (
 	"log"
 	"runtime"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func connectPostgres(cfg Config) (*pgxpool.Pool, error) {
+func connectPostgres(isPrefork bool, cfg Config) (*pgxpool.Pool, error) {
 	maxConn := 5
-	if !fiber.IsChild() {
+	if !isPrefork {
 		maxConn = runtime.NumCPU() * 4
 	}
 

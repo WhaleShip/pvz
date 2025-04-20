@@ -3,6 +3,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/WhaleShip/pvz/badge.svg?branch=main)](https://coveralls.io/github/WhaleShip/pvz?branch=main)
 [![linters](https://github.com/WhaleShip/pvz/actions/workflows/golangci-lint.yml/badge.svg)](https://github.com/WhaleShip/pvz/actions/workflows/golangci-lint.yml)
 [![unit-tests](https://github.com/WhaleShip/pvz/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/WhaleShip/pvz/actions/workflows/unit-tests.yml)
+[![integration-tests](https://github.com/WhaleShip/pvz/actions/workflows/int-tests.yml/badge.svg)](https://github.com/WhaleShip/pvz/actions/workflows/int-tests.yml)
 
 ## Краткая сводка
 
@@ -10,7 +11,7 @@
 - ### Для регистрации используется stateless JWT
 - ### в качестве бд используется postgresql с pgBouncer
 - ### интегарционныые тесты находятся в папке tests/integreation_test 
-- ### [конфигурация линтера](.golangci.yaml)
+- ### [конфигурация линтера](.golangci.yml)
 
 > [!IMPORTANT]  
 > Дисклеймер: Разработка велась под Linux, у некоторых команд могут возникать проблемы с запуском на Windows, написал решение для всех изввестных мне проблем, но не могу быть уверен.

@@ -4,7 +4,8 @@ WORKDIR /pvz
 COPY go.mod go.sum ./
 RUN go mod download
 
-COPY . .
+COPY cmd/ ./cmd/
+COPY internal/ ./internal/
 RUN CGO_ENABLED=0 GOOS=linux go build -a -o pvz-app ./cmd/pvz/main.go
 
 FROM alpine:latest
